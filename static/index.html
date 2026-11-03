@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="tg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101513">
+  <link rel="icon" href="data:,">
+  <title>Занҷири таъминот · Тоҷикистон</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{color-scheme:dark;--bg:#101513;--panel:#171e1b;--panel2:#1d2621;--line:#29332e;--text:#e7eee9;--muted:#8b9990;--mint:#a8d7b8;--acid:#d5e66f;--red:#e28270;--blue:#8bb4ca}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;font-size:13px}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}.mono{font-family:'DM Mono',monospace}.app{min-height:100vh;display:grid;grid-template-columns:224px minmax(0,1fr)}.sidebar{border-right:1px solid var(--line);padding:25px 15px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;background:#121815}.brand{display:flex;align-items:center;gap:11px;padding:0 10px 31px}.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--mint);color:#142019;display:grid;place-items:center}.brand-name{font-weight:800;font-size:15px}.brand-sub{font-size:10px;color:var(--muted);margin-top:2px}.nav-label{padding:0 11px;margin:12px 0 9px;color:#66736b;font-size:10px;font-weight:700;text-transform:uppercase}.nav{display:grid;gap:4px}.nav-btn{width:100%;border:0;background:transparent;color:#9daaa1;text-align:left;display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:7px;transition:background .15s,color .15s}.nav-btn:hover,.nav-btn.active{background:#242e28;color:#eaf3ec}.nav-btn.active{box-shadow:inset 2px 0 var(--mint)}.nav-btn.active svg{color:var(--mint)}.sidebar-bottom{margin-top:auto;border-top:1px solid var(--line);padding:16px 10px 0;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:9px}.live-dot{width:7px;height:7px;background:#a8d7b8;border-radius:50%;box-shadow:0 0 12px #a8d780}
+    .workspace{min-width:0}.topbar{height:68px;border-bottom:1px solid var(--line);padding:0 34px;display:flex;align-items:center;justify-content:space-between;background:#121815}.crumb{font-size:12px;color:var(--muted)}.crumb strong{color:var(--text);font-weight:600}.top-actions{display:flex;align-items:center;gap:14px}.date-tag,.user-chip{border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:#b1beb5;font-size:11px}.user-chip{display:flex;align-items:center;gap:8px}.avatar{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#42564a;color:#d9ecdd;font-size:10px}.content{max-width:1550px;margin:0 auto;padding:30px 34px 50px}.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:23px;gap:20px;animation:arrive .3s ease-out}.eyebrow{font-family:'DM Mono',monospace;color:var(--mint);font-size:10px;text-transform:uppercase;margin-bottom:7px}.page-head h1{font-size:25px;line-height:1.2;font-weight:700;margin:0}.page-head p{margin:7px 0 0;color:var(--muted);font-size:12px}.btn{border:1px solid var(--line);background:#222c26;color:#dce7df;border-radius:6px;padding:9px 13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:.15s}.btn:hover{border-color:#61796a;background:#29362e}.btn-primary{background:var(--mint);color:#142019;border-color:var(--mint);font-weight:700}.btn-primary:hover{background:#bce5c8;border-color:#bce5c8}.btn-quiet{background:transparent}.icon-btn{width:34px;height:34px;padding:0}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:17px}.stat{background:#171e1b;border:1px solid var(--line);border-radius:7px;padding:15px 16px;position:relative;overflow:hidden}.stat:after{content:'';position:absolute;right:-20px;top:-30px;width:95px;height:95px;border:1px solid #293b30;border-radius:50%}.stat-label{color:var(--muted);font-size:11px}.stat-value{font-size:24px;font-weight:700;margin-top:8px;line-height:1}.stat-note{font-size:10px;color:var(--mint);margin-top:8px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;overflow:hidden}.panel-head{padding:15px 17px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.panel-title{font-size:13px;font-weight:700}.panel-kicker{font-size:10px;color:var(--muted);margin-top:4px}.studio-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(325px,.9fr);gap:14px;align-items:stretch}.scene-wrap{position:relative;height:360px;background:radial-gradient(ellipse at 50% 45%,#2b3930 0,#1b241f 45%,#161d19 78%);overflow:hidden}.scene-wrap canvas{display:block;width:100%;height:100%}.scene-label{position:absolute;left:15px;top:13px;display:flex;gap:8px;align-items:center;color:#aab8ad;font-size:10px;pointer-events:none}.scene-badge{background:#222e27;border:1px solid #39483e;color:#b6d6be;padding:5px 7px;border-radius:4px;font-family:'DM Mono',monospace;font-size:9px}.scene-help{position:absolute;bottom:12px;left:15px;color:#9ba99f;font-size:10px;pointer-events:none}.scene-controls{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:7px;align-items:center}.seg{display:flex;gap:4px;background:#111713;border:1px solid var(--line);border-radius:6px;padding:3px}.seg button{border:0;background:transparent;color:var(--muted);padding:6px 9px;border-radius:4px;font-size:10px}.seg button.active{background:#344139;color:#e6f0e9}.control-note{margin-left:auto;color:var(--muted);font-size:10px}.form-grid{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;gap:6px;min-width:0}.field.full{grid-column:1/-1}.field label{font-size:10px;color:#a9b5ac;font-weight:600}.input,.select,.textarea{background:#111713;border:1px solid #303b34;color:var(--text);border-radius:5px;padding:9px 10px;width:100%;min-width:0;outline:none}.input:focus,.select:focus,.textarea:focus{border-color:#81ae8e;box-shadow:0 0 0 2px #81ae8e22}.textarea{resize:vertical;min-height:65px}.inline-input{display:flex;gap:7px}.input[type=color]{height:37px;width:42px;padding:3px;flex:none}.range-row{display:flex;align-items:center;gap:10px}.range-row input{width:100%;accent-color:var(--mint)}.range-value{font-family:'DM Mono',monospace;font-size:11px;color:var(--mint);min-width:38px;text-align:right}.presets{display:flex;gap:7px;align-items:center}.swatch{width:19px;height:19px;border-radius:50%;border:1px solid #ffffff44;padding:0}.release-head{margin:24px 0 12px;display:flex;align-items:center;justify-content:space-between}.release-head h2{font-size:15px;margin:0}.release-head span{font-size:10px;color:var(--muted)}.form-actions{grid-column:1/-1;border-top:1px solid var(--line);padding-top:13px;display:flex;align-items:center;justify-content:space-between;gap:12px}.hint{font-size:10px;color:var(--muted);line-height:1.5}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:690px}th{text-align:left;color:#839087;font-size:10px;font-weight:600;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}td{padding:12px 14px;border-bottom:1px solid #222b26;font-size:11px;color:#d2ddd5;white-space:nowrap}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#1b241f}.product-link{border:0;background:none;color:#dce9df;padding:0;font-weight:700;text-align:left}.product-link:hover{color:var(--mint)}.muted{color:var(--muted)}.mono-id{font-family:'DM Mono',monospace;font-size:10px;color:#b7c5bb}.status{display:inline-flex;align-items:center;gap:6px;border-radius:99px;background:#26352c;color:#b5dfbf;padding:5px 8px;font-size:9px}.status:before{content:'';width:5px;height:5px;border-radius:50%;background:#a8d7b8}.status.warn{background:#392e25;color:#eac18a}.status.warn:before{background:#e8bc78}.status.blue{background:#253239;color:#a8cada}.section-gap{margin-top:15px}.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tabs{display:flex;gap:4px;padding:12px 15px;border-bottom:1px solid var(--line);flex-wrap:wrap}.tab-btn{border:1px solid transparent;background:transparent;color:var(--muted);padding:8px 11px;border-radius:5px;font-size:11px}.tab-btn.active{color:var(--mint);background:#243129;border-color:#33453a}.form-footer{padding:0 16px 16px;display:flex;justify-content:flex-end}.tracking-search{display:flex;gap:8px;max-width:550px;width:100%}.track-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}.passport-head{padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.passport-info{display:flex;align-items:center;gap:12px}.product-glyph{width:40px;height:40px;border-radius:7px;background:#29382e;display:grid;place-items:center;color:var(--mint)}.passport-title{font-size:14px;font-weight:700}.passport-meta{font-size:10px;color:var(--muted);margin-top:4px}.timeline{padding:18px 20px 20px}.event{display:grid;grid-template-columns:24px 1fr;gap:12px;position:relative;padding-bottom:19px}.event:not(:last-child):before{content:'';position:absolute;width:1px;background:#425348;top:18px;bottom:0;left:8px}.event-marker{width:17px;height:17px;border:1px solid var(--mint);background:#203128;border-radius:50%;z-index:1;display:grid;place-items:center;color:var(--mint)}.event-body{border:1px solid var(--line);background:#1a221e;border-radius:6px;padding:12px}.event-head{display:flex;justify-content:space-between;gap:12px}.event-title{font-size:11px;font-weight:700}.event-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)}.event-location{margin-top:5px;color:#b2c0b6;font-size:10px}.event-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 12px;margin-top:11px;padding-top:10px;border-top:1px solid #2b352f}.meta-item{font-size:9px;color:var(--muted)}.meta-item strong{display:block;color:#d3ded5;font-size:10px;font-weight:500;margin-top:3px}.mini-scene{height:180px;background:radial-gradient(ellipse,#344338,#1a211d 72%);position:relative}.mini-scene canvas{width:100%;height:100%;display:block}.mini-label{position:absolute;top:11px;left:12px;font-size:9px;color:#aebbb2}.empty{padding:35px 20px;text-align:center;color:var(--muted);font-size:11px}.mdm-nav{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px}.mdm-actions{display:flex;gap:8px;align-items:center}.search-small{width:230px}.toast{position:fixed;right:23px;bottom:22px;z-index:100;background:#e4f0e7;color:#152019;border-radius:6px;padding:12px 15px;box-shadow:0 10px 35px #0008;font-size:12px;max-width:380px;animation:toastIn .22s ease-out}.toast.error{background:#f0d7d0;color:#321b16}@keyframes toastIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}@keyframes arrive{from{transform:translateY(5px);opacity:0}to{transform:translateY(0);opacity:1}}.modal-backdrop{position:fixed;inset:0;background:#070a08b8;z-index:30;display:grid;place-items:center;padding:20px}.modal{width:min(560px,100%);background:var(--panel);border:1px solid #3a473f;border-radius:8px;box-shadow:0 25px 80px #0009}.modal-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-body{padding:16px}.modal-footer{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}.hidden{display:none!important}.loading{min-height:60vh;display:grid;place-items:center;color:var(--muted)}
+    @media(max-width:1050px){.app{grid-template-columns:70px minmax(0,1fr)}.sidebar{padding:20px 9px}.brand{justify-content:center;padding:0 0 27px}.brand-name,.brand-sub,.nav-label,.nav-btn span,.sidebar-bottom span{display:none}.nav-btn{justify-content:center;padding:11px}.sidebar-bottom{justify-content:center;padding:15px 0}.content{padding:25px 22px}.studio-grid{grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr)}}
+    @media(max-width:760px){.app{display:block}.sidebar{position:fixed;z-index:20;bottom:0;top:auto;width:100%;height:62px;padding:6px 8px;border-right:0;border-top:1px solid var(--line);display:block}.brand,.sidebar-bottom,.nav-label{display:none}.nav{height:100%;grid-template-columns:repeat(4,1fr);align-items:center}.nav-btn{height:48px;display:grid;gap:3px;justify-items:center;align-content:center;padding:3px;border-radius:5px;font-size:9px}.nav-btn span{display:block;font-size:8px}.workspace{padding-bottom:62px}.topbar{height:56px;padding:0 16px}.top-actions{gap:7px}.date-tag{display:none}.content{padding:21px 14px 28px}.page-head{align-items:flex-start;flex-direction:column;margin-bottom:16px}.page-head h1{font-size:21px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{padding:12px}.stat-value{font-size:21px}.studio-grid,.split,.track-layout{grid-template-columns:1fr}.scene-wrap{height:280px}.form-grid{padding:13px;gap:10px}.track-layout{display:flex;flex-direction:column-reverse}.mini-scene{height:165px}.tracking-search{max-width:none}.event-meta{grid-template-columns:1fr 1fr}.topbar .crumb{font-size:10px}.user-chip{padding:5px 7px}.user-chip .user-label{display:none}.search-small{width:100%}.mdm-actions{width:100%;flex-wrap:wrap}.panel-head{align-items:flex-start}.control-note{display:none}}
+    @media(max-width:410px){.form-grid{grid-template-columns:1fr}.field.full,.form-actions{grid-column:auto}.form-actions{align-items:flex-start;flex-direction:column}.scene-controls{gap:6px}.control-note{display:none}.seg button{padding:6px 7px}.event-head{flex-direction:column;gap:4px}}
+    :root{--bg:#09090b;--panel:#111114;--panel2:#18181c;--line:#29292f;--text:#f4f3f5;--muted:#a09da5;--mint:#ff4655;--acid:#ff7b82;--red:#ff4655;--blue:#b1a3aa}
+    body{background:radial-gradient(ellipse at 82% 8%,#38111655,transparent 34%),radial-gradient(ellipse at 6% 82%,#27101444,transparent 32%),var(--bg);background-attachment:fixed}
+    body:before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.16;background-image:linear-gradient(#ff465510 1px,transparent 1px),linear-gradient(90deg,#ff465510 1px,transparent 1px);background-size:46px 46px;mask-image:linear-gradient(to bottom,black,transparent 82%)}
+    .sidebar,.topbar{background:#0d0d10ee;border-color:#29292f}
+    .brand-mark{background:linear-gradient(145deg,#ff6872,#df1d30);color:white;box-shadow:0 0 25px #f32d4145}
+    .nav-btn:hover,.nav-btn.active{background:#35171b;color:#fff}
+    .nav-btn.active{box-shadow:inset 2px 0 var(--mint)}
+    .btn{background:#1b1b20;border-color:#333139}.btn:hover{border-color:#b63440;background:#271519}
+    .btn-primary{background:linear-gradient(135deg,#ff5360,#d91f33);border-color:#ed3544;color:white;box-shadow:0 5px 18px #e1263830}
+    .btn-primary:hover{background:linear-gradient(135deg,#ff707a,#e12a3c);border-color:#ff6570}
+    .stat,.panel{background:linear-gradient(145deg,#141418,#101013);border-color:#29292f}
+    .stat:after{border-color:#e12c3c2b}
+    .panel{box-shadow:0 12px 34px #00000022;transition:border-color .22s,transform .22s,box-shadow .22s}
+    .panel:hover{border-color:#493035;box-shadow:0 14px 40px #00000038}
+    .scene-wrap{background:radial-gradient(ellipse at 50% 45%,#431b22 0,#211316 46%,#101013 82%)}
+    .scene-badge{background:#291519;border-color:#5a252e;color:#ff9da4}
+    .input,.select,.textarea{background:#0c0c0f;border-color:#323137}
+    .input:focus,.select:focus,.textarea:focus{border-color:#f04452;box-shadow:0 0 0 2px #f0445222}
+    .tab-btn.active{color:#ff737d;background:#291519;border-color:#52242b}
+    .status{background:#241519;color:#ffafb5}.status:before{background:#ff5865}
+    .status.warn{background:#302018;color:#f2c08c}.status.warn:before{background:#e8bc78}
+    .live-dot{background:#ff5360;box-shadow:0 0 12px #ff5360}
+    .attribute-builder{margin:4px 0 0;padding:16px;border:1px solid #34262a;border-radius:8px;background:linear-gradient(145deg,#171316,#101013);animation:arrive .3s ease-out}
+    .attribute-builder-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+    .attribute-builder-head strong{font-size:12px}.attribute-builder-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+    .attribute-type-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+    .attribute-builder-actions{grid-column:1/-1;display:flex;justify-content:flex-end}
+    .attribute-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .attribute-chip{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 11px;border:1px solid #453036;border-radius:7px;background:#1d1518;animation:arrive .2s ease-out}
+    .attribute-chip span{display:grid;gap:2px}.attribute-chip strong{font-size:10px}.attribute-chip small{color:var(--muted);font-size:9px}
+    @keyframes arrive{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes redPulse{0%,100%{box-shadow:0 0 0 0 #f0445200}50%{box-shadow:0 0 22px 2px #f0445219}}
+    .brand-mark{animation:redPulse 4.5s ease-in-out infinite}
+    @media(max-width:760px){.attribute-builder{padding:12px}.attribute-builder-grid{grid-template-columns:1fr}.attribute-type-fields{grid-column:auto;grid-template-columns:1fr}.attribute-builder-actions{grid-column:auto}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Низоми таъминот">
+        <span class="brand-mark"><i data-lucide="scan-line" width="19"></i></span>
+        <span><span class="brand-name">занҷир<span style="color:var(--mint)">&</span>пайгирӣ</span><span class="brand-sub" style="display:block">НИЗОМИ ТАЪМИНОТ</span></span>
+      </a>
+      <div class="nav-label">Фазои корӣ</div>
+      <nav class="nav" aria-label="Паймоиши асосӣ">
+        <button class="nav-btn active" data-view="dashboard"><i data-lucide="layout-dashboard" width="17"></i><span>Конструктор</span></button>
+        <button class="nav-btn" data-view="logistics"><i data-lucide="truck" width="17"></i><span>Ҳаракати бор</span></button>
+        <button class="nav-btn" data-view="tracking"><i data-lucide="route" width="17"></i><span>Пайгирӣ</span></button>
+        <button class="nav-btn" data-view="mdm"><i data-lucide="library-big" width="17"></i><span>Маълумотномаҳо</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="live-dot"></span><span>Феҳрист ҳамоҳанг аст</span></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="crumb">Занҷири таъминот <span style="color:#546158;margin:0 7px">/</span> <strong id="crumb-title">Студияи маҳсулот</strong></div><div class="top-actions"><span class="date-tag mono" id="today"></span><div class="user-chip"><span class="avatar">ЗН</span><span class="user-label">Зебо Нурова</span></div></div></header>
+      <main class="content" id="app-content"><div class="loading">Феҳрист ва маълумотномаҳо бор мешаванд…</div></main>
+    </div>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="polite"></div>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/controls/OrbitControls.js';
+
+    const API='/api';
+    const resourceNames={product_catalog:'Феҳристи маҳсулот',locations:'Ҷойҳо',staff:'Кормандон',vehicles:'Нақлиёт',routes:'Масирҳо'};
+    const resourceFields={
+      product_catalog:[['sku','SKU'],['name','Номи маҳсулот'],['category','Гурӯҳ'],['unit','Воҳиди ченак'],['model','Намунаи 3D'],['attributes','Атрибутҳо'],['description','Тавсиф']],
+      locations:[['name','Номи ҷой'],['kind','Навъ'],['region','Минтақа'],['address','Суроға'],['city','Шаҳр']],
+      staff:[['name','Ному насаб'],['role','Вазифа'],['employee_no','Рақами корманд'],['phone','Телефон']],
+      vehicles:[['plate','Рақами мошин'],['brand','Тамға'],['driver','Ронанда'],['driver_phone','Телефони ронанда'],['capacity','Ғунҷоиш, т'],['refrigerated','Яхдон']],
+      routes:[['name','Номи масир'],['origin','Аз куҷо'],['destination','Ба куҷо'],['distance_km','Масофа, км'],['duration_hours','Вақт, соат']]
+    };
+    const stageNames={factory:'Корхона',workshop:'Сех ва назорати дохилӣ',warehouse:'Анбор ва феҳрист',transport:'Нақлиёт'};
+    const locationKinds={factory:'Корхона',warehouse:'Анбор',pickup:'Нуқтаи қабул'};
+    const stageOrder=['factory','workshop','warehouse','transport'];
+    const tajikMonths=['январ','феврал','март','апрел','май','июн','июл','август','сентябр','октябр','ноябр','декабр'];
+    if(!Intl.DateTimeFormat.supportedLocalesOf('tg-TJ').length){
+      const nativeDateToLocaleString=Date.prototype.toLocaleString;
+      Date.prototype.toLocaleString=function(locale,options){
+        if(locale==='tg-TJ'){
+          const date=this;
+          const day=date.getDate();
+          const month=tajikMonths[date.getMonth()];
+          const year=date.getFullYear();
+          if(options?.timeStyle){
+            const hour=String(date.getHours()).padStart(2,'0');
+            const minute=String(date.getMinutes()).padStart(2,'0');
+            return `${day} ${month} ${year}, ${hour}:${minute}`;
+          }
+          return `${day} ${month} ${year}`;
+        }
+        return nativeDateToLocaleString.call(this,locale,options);
+      };
+    }
+    const state={data:null,view:'dashboard',mdm:'product_catalog',logisticsStage:'workshop',trackBarcode:'',selectedBarcode:'',selectedCatalogId:null,scene:null,miniScene:null,config:{type:'marker',color:'#729c82',capColor:'#d2a35e',length:12,diameter:1.8,shape:'faceted'}};
+    const $=(selector,root=document)=>root.querySelector(selector);
+    const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const api=async(path,options={})=>{const response=await fetch(`${API}${path}`,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||'Амалиёт иҷро нашуд');return body;};
+    const toast=(message,error=false)=>{const root=$('#toast-root');root.innerHTML=`<div class="toast ${error?'error':''}">${esc(message)}</div>`;setTimeout(()=>{root.innerHTML='';},3600);};
+    const icon=(name,size=15)=>`<i data-lucide="${name}" width="${size}" height="${size}"></i>`;
+    const refreshIcons=()=>window.lucide?.createIcons();
+    const options=(items,key='id',label=item=>item.name)=>items.map(item=>`<option value="${esc(item[key])}">${esc(label(item))}</option>`).join('');
+    const locationsOf=kind=>(state.data?.locations||[]).filter(item=>item.kind===kind);
+    const staffOf=role=>(state.data?.staff||[]).filter(item=>item.role===role);
+    const stageName=stage=>stageNames[stage]||stage;
+    const locationLabel=item=>`${item.name} · ${item.city}`;
+    const catalogModelNames={marker:'Маркер',pen:'Қалами шарикдор',pencil:'Қалам',notebook:'Дафтар',folder:'Ҷузвадон',bottle:'Зарф / шиша',box:'Қуттӣ',ruler:'Хаткашак',eraser:'Поккунак',mug:'Пиёла',soap:'Собун'};
+    const catalogModelName=model=>catalogModelNames[model]||model;
+    const catalogProduct=id=>state.data.product_catalog.find(item=>item.id===Number(id));
+    function defaultConfig(product){
+      const config={type:product.model,color:'#729c82',capColor:'#d2a35e'};
+      for(const specification of product.specifications||[])config[specification.key]=specification.default;
+      return config;
+    }
+
+    function shell(title,subtitle,eyebrow,body){
+      $('#crumb-title').textContent=title;
+      $('#app-content').innerHTML=`<div class="page-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${subtitle}</p></div></div>${body}`;
+      refreshIcons();
+    }
+    function barcode(){const base=`485${Date.now().toString().slice(-9)}`;const sum=[...base].reduce((total,digit,index)=>total+Number(digit)*(index%2?3:1),0);return `${base}${(10-sum%10)%10}`;}
+    function dashboard(){
+      const products=state.data.products;
+      const catalog=state.data.product_catalog;
+      if(!catalog.length){
+        shell('Феҳристи маҳсулот','Аввал номенклатураи маҳсулотро илова кунед, баъд корхона метавонад онро ба истеҳсол барорад.','КОНСТРУКТОРИ МАҲСУЛОТ',`<section class="panel empty"><div class="panel-title">Феҳрист ҳоло холӣ аст</div><p class="hint">Мол ва атрибутҳои онро метавонед якҷоя илова кунед.</p><button class="btn btn-primary" data-add-product>${icon('plus',14)} Иловаи мол ва атрибутҳо</button></section>`);
+        $('#app-content').addEventListener('click',event=>{const button=event.target.closest('[data-add-product]');if(button){openCatalogProductForm();return;}const goto=event.target.closest('[data-goto]');if(goto)navigate(goto.dataset.goto);});
+        return;
+      }
+      if(!catalog.some(item=>item.id===state.selectedCatalogId))state.selectedCatalogId=catalog[0].id;
+      const selectedCatalog=catalogProduct(state.selectedCatalogId);
+      if(state.config.type!==selectedCatalog.model)state.config=defaultConfig(selectedCatalog);
+      const atTransport=products.filter(item=>item.current_stage==='transport').length;
+      const audited=products.filter(item=>item.current_stage==='warehouse'||item.current_stage==='transport').length;
+      const pending=products.filter(item=>item.qc_status.toLowerCase().includes('интизор')).length;
+      shell('Конструктори маҳсулот','Аз феҳристи умумӣ молро интихоб кунед, намунаи онро танзим намоед ва барориши корхонаро сабт кунед.','ФЕҲРИСТ · КОНСТРУКТОР · БАРОРИШ',`
+        <div class="stats">
+          <div class="stat"><div class="stat-label">Маҳсулот дар феҳрист</div><div class="stat-value">${products.length}</div><div class="stat-note">Ҳар баста пайгирӣ мешавад</div></div>
+          <div class="stat"><div class="stat-label">Дар роҳ</div><div class="stat-value">${atTransport}</div><div class="stat-note">Мошинҳои фаъол</div></div>
+          <div class="stat"><div class="stat-label">Марҳилаҳои анбор ва роҳ</div><div class="stat-value">${audited}</div><div class="stat-note">Бо занҷири аудит</div></div>
+          <div class="stat"><div class="stat-label">Назорати сифат</div><div class="stat-value">${pending}</div><div class="stat-note">Интизори санҷиш</div></div>
+        </div>
+        <div class="studio-grid">
+          <section class="panel"><div class="panel-head"><div><div class="panel-title">Намунаи маҳсулот</div><div class="panel-kicker">Маҳсулоти дилхоҳро аз феҳрист интихоб кунед</div></div><span class="scene-badge">3D · НАМУНА</span></div>
+            <div class="scene-wrap" id="scene-main"><div class="scene-label"><span class="live-dot"></span><span id="scene-product-name">${esc(selectedCatalog.name)}</span><span class="scene-badge" id="scene-product-model">${esc(catalogModelName(selectedCatalog.model))}</span></div><div class="scene-help">Барои гардондан кашед · чарх барои наздиккунӣ</div></div>
+          </section>
+          <section class="panel"><div class="panel-head"><div><div class="panel-title">Феҳрист ва танзими намуна</div><div class="panel-kicker">Категория ва параметрҳои маҳсулот нигоҳ дошта мешаванд</div></div><button class="btn btn-quiet btn-small" type="button" data-add-product>${icon('plus',13)} Иловаи мол + атрибутҳо</button></div>
+            <div class="form-grid"><div class="field full"><label for="release-catalog">Номенклатура</label><select class="select" id="release-catalog">${options(catalog,'id',item=>`${item.name} · ${item.sku} · ${item.category}`)}</select><span class="hint" id="catalog-description">${esc(selectedCatalog.description||selectedCatalog.category)}</span></div></div>
+            <div class="form-grid" id="constructor-config">${constructorControls(selectedCatalog)}</div>
+          </section>
+        </div>
+        <div class="release-head"><h2>Сабти барориши корхона</h2><span>Марҳилаи аввали таърихи маҳсулот худкор сабт мешавад</span></div>
+        <form class="panel" id="release-form"><div class="form-grid">
+          <div class="field"><label>Маҳсулоти интихобшуда</label><input class="input" id="release-name" readonly value="${esc(selectedCatalog.name)}"></div>
+          <div class="field"><label for="release-batch">Рақами баста</label><input class="input mono" id="release-batch" required value="TJ-26-105"></div>
+          <div class="field"><label for="release-barcode">Рақами штрихкод</label><div class="inline-input"><input class="input mono" id="release-barcode" required value="${barcode()}"><button type="button" class="btn icon-btn" id="generate-barcode" title="Рақами нав созед" aria-label="Рақами нав созед">${icon('refresh-cw',14)}</button></div></div>
+          <div class="field"><label for="release-factory">Корхонаи истеҳсолкунанда</label><select class="select" id="release-factory" required>${options(locationsOf('factory'),'id',item=>item.name)}</select></div>
+          <div class="field"><label for="release-responsible">Масъули сех</label><select class="select" id="release-responsible" required>${options(state.data.staff.filter(item=>['Роҳбари корхона','Устои сех'].includes(item.role)))}</select></div>
+          <div class="field"><label for="release-operator">Оператори низом</label><select class="select" id="release-operator" required>${options(state.data.staff)}</select></div>
+          <div class="field"><label for="release-weight">Вазни баста, кг</label><input class="input" id="release-weight" type="number" min="0.01" step="0.01" value="8.5" required></div>
+          <div class="field"><label for="release-quality">Ҳолати санҷиши сифат</label><select class="select" id="release-quality"><option>Санҷида шуд</option><option>Интизори санҷиш</option></select></div>
+          <div class="field full"><label for="release-note">Эзоҳ</label><textarea class="textarea" id="release-note" placeholder="Натиҷаи санҷиш, рақами навбат..."></textarea></div>
+          <div class="form-actions"><span class="hint">Мол ва намуна аз феҳристи номенклатура интихоб мешаванд. Штрихкод бояд нав бошад.</span><button class="btn btn-primary" type="submit">${icon('factory',15)} Баровардан аз корхона</button></div>
+        </div></form>
+        <section class="panel section-gap"><div class="panel-head"><div><div class="panel-title">Маҳсулоти охирин</div><div class="panel-kicker">Барои дидани шиносномаи рақамӣ номи маҳсулотро интихоб кунед</div></div><button class="btn btn-quiet" data-goto="tracking">Ҳамаи маҳсулот ${icon('arrow-up-right',13)}</button></div>
+          <div class="table-wrap"><table><thead><tr><th>МАҲСУЛОТ</th><th>ШТРИХКОД</th><th>БАСТА</th><th>МАРҲИЛА</th><th>СИФАТ</th></tr></thead><tbody>${products.slice(0,5).map(product=>`<tr><td><button class="product-link" data-track="${esc(product.barcode)}">${esc(product.name)}</button></td><td class="mono-id">${esc(product.barcode)}</td><td class="mono-id">${esc(product.batch_id)}</td><td><span class="status ${product.current_stage==='transport'?'warn':''}">${esc(stageName(product.current_stage))}</span></td><td>${esc(product.qc_status)}</td></tr>`).join('')}</tbody></table></div>
+        </section>`);
+      bindStudio();initScene($('#scene-main'),state.config,'main');
+      $('#release-operator').value=state.data.staff.find(item=>item.role==='Оператори низом')?.id||state.data.staff[0]?.id;
+    }
+    function constructorControls(product){
+      const colorLabel=product.model==='bottle'?'Ранги сарпӯш':'Ранги ҷузъиёти иловагӣ';
+      const questions=(product.specifications||[]).map(specification=>{
+        const value=state.config[specification.key]??specification.default;
+        if(specification.type==='select')return `<div class="field"><label for="config-${esc(specification.key)}">${esc(specification.label)}</label><select class="select" id="config-${esc(specification.key)}" data-config="${esc(specification.key)}">${specification.options.map(option=>`<option value="${esc(option.value)}" ${option.value===value?'selected':''}>${esc(option.label)}</option>`).join('')}</select></div>`;
+        if(specification.type==='range')return `<div class="field"><label for="config-${esc(specification.key)}">${esc(specification.label)}</label><div class="range-row"><input id="config-${esc(specification.key)}" data-config="${esc(specification.key)}" type="range" min="${specification.min}" max="${specification.max}" step="${specification.step}" value="${value}"><span class="range-value" data-value="${esc(specification.key)}">${value} ${esc(specification.unit||'')}</span></div></div>`;
+        if(specification.type==='text')return `<div class="field"><label for="config-${esc(specification.key)}">${esc(specification.label)}${specification.unit?`, ${esc(specification.unit)}`:''}</label><input class="input" id="config-${esc(specification.key)}" data-config="${esc(specification.key)}" type="text" maxlength="500" value="${esc(value)}" required></div>`;
+        return `<div class="field"><label for="config-${esc(specification.key)}">${esc(specification.label)}${specification.unit?`, ${esc(specification.unit)}`:''}</label><input class="input" id="config-${esc(specification.key)}" data-config="${esc(specification.key)}" type="number" min="${specification.min}" max="${specification.max}" step="${specification.step}" value="${value}" required></div>`;
+      }).join('');
+      return `<div class="field"><label for="body-color">Ранги асосӣ</label><input class="input" id="body-color" data-config="color" type="color" value="${state.config.color}"></div><div class="field"><label for="cap-color">${colorLabel}</label><input class="input" id="cap-color" data-config="capColor" type="color" value="${state.config.capColor}"></div>${questions}`;
+    }
+    function bindStudio(){
+      const controls=$('#constructor-config');
+      const updateConfiguration=event=>{const field=event.target.dataset.config;if(!field)return;state.config[field]=event.target.type==='range'||event.target.type==='number'?Number(event.target.value):event.target.value;const specification=catalogProduct(state.selectedCatalogId).specifications.find(item=>item.key===field);const output=controls.querySelector(`[data-value="${field}"]`);if(output)output.textContent=`${state.config[field]} ${specification?.unit||''}`;updateScene(state.scene,state.config);};
+      controls.addEventListener('input',updateConfiguration);controls.addEventListener('change',event=>{if(event.target.tagName==='SELECT')updateConfiguration(event);});
+      controls.addEventListener('click',event=>{const button=event.target.closest('[data-shape]');if(!button)return;state.config.shape=button.dataset.shape;controls.querySelectorAll('[data-shape]').forEach(item=>item.classList.toggle('active',item===button));updateScene(state.scene,state.config);});
+      $('#release-catalog').addEventListener('change',event=>{
+        const product=catalogProduct(event.target.value);if(!product)return;
+        state.selectedCatalogId=product.id;state.config=defaultConfig(product);
+        $('#release-name').value=product.name;$('#catalog-description').textContent=product.description||product.category;
+        $('#scene-product-name').textContent=product.name;$('#scene-product-model').textContent=catalogModelName(product.model);
+        controls.innerHTML=constructorControls(product);updateScene(state.scene,state.config);
+      });
+      $('#generate-barcode').addEventListener('click',()=>{$('#release-barcode').value=barcode();});
+      $('#release-form').addEventListener('submit',releaseProduct);
+      $('#app-content').addEventListener('click',event=>{const addProduct=event.target.closest('[data-add-product]');if(addProduct){openCatalogProductForm();return;}const track=event.target.closest('[data-track]');if(track)openTracking(track.dataset.track);const goto=event.target.closest('[data-goto]');if(goto)navigate(goto.dataset.goto);});
+    }
+    function openCatalogProductForm(){state.view='mdm';state.mdm='product_catalog';navActive();mdm();openMdmModal('product_catalog');}
+    async function releaseProduct(event){
+      event.preventDefault();
+      try{await api('/products',{method:'POST',body:JSON.stringify({barcode:$('#release-barcode').value.trim(),batch_id:$('#release-batch').value.trim(),catalog_id:Number($('#release-catalog').value),config:state.config,weight:Number($('#release-weight').value),qc_status:$('#release-quality').value,note:$('#release-note').value.trim(),factory_id:Number($('#release-factory').value),responsible_id:Number($('#release-responsible').value),operator_id:Number($('#release-operator').value)})});await loadData();toast('Барориши маҳсулот дар феҳрист сабт шуд.');dashboard();}
+      catch(error){toast(error.message,true);}
+    }
+
+    function logistics(){
+      const stage=state.logisticsStage;
+      const activeProducts=state.data.products.filter(item=>stageOrder.indexOf(item.current_stage)===stageOrder.indexOf(stage)-1);
+      shell('Ҳаракати бор','Ҳар марҳила бо масъул, ҷой ва шароити қабули бор сабт мешавад. Гузаштан аз марҳила манъ аст.','ЗАНҶИРИ ҲАРАКАТИ МАҲСУЛОТ',`
+        <section class="panel"><div class="panel-head"><div><div class="panel-title">Сабти марҳилаи нав</div><div class="panel-kicker">Ҳамаи рӯйдодҳои пешина дар феҳрист бетағйир мемонанд</div></div>${icon('git-branch')}</div>
+          <div class="tabs"><button class="tab-btn ${stage==='workshop'?'active':''}" data-stage="workshop">01 · Сех</button><button class="tab-btn ${stage==='warehouse'?'active':''}" data-stage="warehouse">02 · Анбор</button><button class="tab-btn ${stage==='transport'?'active':''}" data-stage="transport">03 · Нақлиёт</button></div>
+          <form id="event-form"><div class="form-grid">
+            <div class="field full"><label for="event-product">Маҳсулот аз рӯи рақами штрихкод</label><select class="select" id="event-product" required>${options(activeProducts,'barcode',item=>`${item.barcode} · ${item.name}`)}</select>${activeProducts.length?'':'<span class="hint">Барои ин марҳила маҳсулоти мувофиқ нест.</span>'}</div>
+            <div class="field"><label for="event-location">${stage==='workshop'?'Корхона / сех':stage==='warehouse'?'Анбор':'Ҷойи интиқол'}</label><select class="select" id="event-location" required>${options(stage==='workshop'?locationsOf('factory'):stage==='warehouse'?locationsOf('warehouse'):state.data.locations,'id',locationLabel)}</select></div>
+            <div class="field"><label for="event-responsible">${stage==='workshop'?'Устои масъул':stage==='warehouse'?'Анбордор':'Масъули интиқол'}</label><select class="select" id="event-responsible" required>${options(stage==='workshop'?staffOf('Устои сех'):stage==='warehouse'?staffOf('Анбордор'):staffOf('Логист'))}</select></div>
+            <div class="field"><label for="event-operator">${stage==='warehouse'?'Қабулкунандаи бор':'Оператори сабт'}</label><select class="select" id="event-operator" required>${options(stage==='warehouse'?staffOf('Қабулкунандаи бор'):state.data.staff)}</select></div>
+            ${stage==='workshop'?workshopFields():stage==='warehouse'?warehouseFields():transportFields()}
+            <div class="form-actions"><span class="hint">Корхона → Сех → Анбор → Нақлиёт</span><button class="btn btn-primary" type="submit" ${activeProducts.length?'':'disabled'}>${icon('arrow-right',14)} Сабти марҳила</button></div>
+          </div></form>
+        </section>
+        <div class="split section-gap"><section class="panel"><div class="panel-head"><div><div class="panel-title">Ҳолати маҳсулот</div><div class="panel-kicker">Марҳилаи ҳозираи ҳар баста</div></div></div><div class="table-wrap"><table><thead><tr><th>МАҲСУЛОТ</th><th>МАРҲИЛА</th><th>БАСТА</th></tr></thead><tbody>${state.data.products.map(item=>`<tr><td><button class="product-link" data-track="${esc(item.barcode)}">${esc(item.name)}</button><div class="mono-id">${esc(item.barcode)}</div></td><td><span class="status ${item.current_stage==='transport'?'warn':''}">${esc(stageName(item.current_stage))}</span></td><td class="mono-id">${esc(item.batch_id)}</td></tr>`).join('')}</tbody></table></div></section>
+        <section class="panel"><div class="panel-head"><div><div class="panel-title">Тартиби ҳатмии ҳаракат</div><div class="panel-kicker">Қоида дар сервер низ санҷида мешавад</div></div>${icon('shield-check')}</div><div style="padding:18px"><div class="mono" style="color:var(--mint);line-height:2;font-size:11px">КОРХОНА → СЕХ<br>СЕХ → АНБОР<br>АНБОР → НАҚЛИЁТ</div><p class="hint" style="margin-top:12px">Агар тартиб вайрон шавад, рӯйдод сабт намешавад ва таърихи қаблӣ нигоҳ дошта мешавад.</p></div></section></div>`);
+      document.querySelectorAll('[data-stage]').forEach(button=>button.addEventListener('click',()=>{state.logisticsStage=button.dataset.stage;logistics();}));
+      const selected=state.data.products.find(item=>item.barcode===state.selectedBarcode);if(selected&&activeProducts.some(item=>item.barcode===selected.barcode))$('#event-product').value=selected.barcode;
+      const updateWarehouseSku=()=>{const product=state.data.products.find(item=>item.barcode===$('#event-product').value);const item=product&&catalogProduct(product.catalog_id);if(item&&$('#event-sku'))$('#event-sku').value=item.sku;};
+      $('#event-product').addEventListener('change',updateWarehouseSku);updateWarehouseSku();
+      const operator=state.data.staff.find(item=>item.role==='Оператори низом');if(operator&&$('#event-operator'))$('#event-operator').value=operator.id;
+      $('#event-route')?.addEventListener('change',()=>{const route=state.data.routes.find(item=>item.id===Number($('#event-route').value));if(!route)return;$('#event-origin').value=route.origin;$('#event-destination').value=route.destination;$('#event-eta').value=route.duration_hours;});
+      $('#event-route')?.dispatchEvent(new Event('change'));
+      $('#event-form').addEventListener('submit',submitEvent);
+      $('#app-content').addEventListener('click',event=>{const button=event.target.closest('[data-track]');if(button)openTracking(button.dataset.track);});
+    }
+    function workshopFields(){return `<div class="field"><label for="event-inspection">Натиҷаи санҷиши дохилӣ</label><select class="select" id="event-inspection"><option>Мувофиқи талабот</option><option>Бозбинӣ лозим аст</option></select></div><div class="field"><label for="event-line">Хати истеҳсол</label><input class="input" id="event-line" required value="Хати истеҳсолии 1"></div><div class="field full"><label for="event-adjustment">Эзоҳи усто</label><input class="input" id="event-adjustment" placeholder="Санҷиши сифат ва танзими маҳсулот"></div><div class="field full"><label for="event-revision">Тағйири ихтиёрии тарҳи ҷорӣ</label><select class="select" id="event-revision"><option value="no">Тағйири тарҳ нест</option><option value="yes">Танзими навро ҳамчун версия сабт кардан</option></select></div>`;}
+    function warehouseFields(){return `<div class="field"><label for="event-shelf">Рақами раф</label><input class="input" id="event-shelf" required placeholder="A-12"></div><div class="field"><label for="event-sku">Рақами мол (SKU)</label><input class="input" id="event-sku" required placeholder="TJ-MRK-105"></div><div class="field"><label for="event-price">Нарх, сомонӣ</label><input class="input" id="event-price" type="number" min="0" value="20"></div><div class="field"><label for="event-temperature">Ҳарорати нигоҳдорӣ, °C</label><input class="input" id="event-temperature" type="number" value="21"></div><div class="field"><label for="event-package">Ҳолати баста</label><select class="select" id="event-package"><option>Солим</option><option>Осебдида</option></select></div>`;}
+    function transportFields(){return `<div class="field"><label for="event-vehicle">Мошин ва ронанда</label><select class="select" id="event-vehicle" required>${options(state.data.vehicles,'id',item=>`${item.plate} · ${item.brand} · ${item.driver} · ${item.driver_phone}`)}</select></div><div class="field"><label for="event-route">Масир</label><select class="select" id="event-route" required>${options(state.data.routes,'id',item=>`${item.name} · ${item.distance_km} км`)}</select></div><div class="field"><label for="event-origin">Аз куҷо</label><input class="input" id="event-origin" required></div><div class="field"><label for="event-destination">Ба куҷо</label><input class="input" id="event-destination" required></div><div class="field"><label for="event-eta">Вақти тахминӣ, соат</label><input class="input" id="event-eta" type="number" min="1" required></div><div class="field"><label for="event-temperature">Ҳарорат дар яхдон, °C</label><input class="input" id="event-temperature" type="number" value="17"></div><div class="field"><label for="event-seal">Рақами муҳр</label><input class="input" id="event-seal" required placeholder="TJ-PL-105"></div><div class="field"><label for="event-cargo">Ҳолати бор</label><select class="select" id="event-cargo"><option>Бе осеб</option><option>Санҷиши иловагӣ лозим</option></select></div>`;}
+    function eventMetadata(stage){
+      if(stage==='workshop')return {inspection:$('#event-inspection').value,line:$('#event-line').value,adjustment:$('#event-adjustment').value};
+      if(stage==='warehouse')return {shelf:$('#event-shelf').value,sku:$('#event-sku').value,price_tjs:Number($('#event-price').value),temperature_c:Number($('#event-temperature').value),package:$('#event-package').value};
+      const vehicle=state.data.vehicles.find(item=>item.id===Number($('#event-vehicle').value));const route=state.data.routes.find(item=>item.id===Number($('#event-route').value));
+      return {vehicle:vehicle.plate,brand:vehicle.brand,driver:vehicle.driver,driver_phone:vehicle.driver_phone,route:route.name,origin:$('#event-origin').value,destination:$('#event-destination').value,distance_km:route.distance_km,eta_hours:Number($('#event-eta').value),temperature_c:Number($('#event-temperature').value),seal:$('#event-seal').value,cargo_state:$('#event-cargo').value};
+    }
+    async function submitEvent(event){
+      event.preventDefault();const stage=state.logisticsStage;const barcodeValue=$('#event-product').value;
+      const payload={stage,location_id:Number($('#event-location').value),responsible_id:Number($('#event-responsible').value),operator_id:Number($('#event-operator').value),metadata:eventMetadata(stage)};
+      if(stage==='workshop'&&$('#event-revision').value==='yes'){
+        const product=state.data.products.find(item=>item.barcode===barcodeValue);
+        if(product)payload.config_revision={...product.config};
+      }
+      if(stage==='workshop'&&payload.config_revision)payload.revision_note=$('#event-adjustment').value||'Танзими нав дар сех';
+      try{await api(`/products/${encodeURIComponent(barcodeValue)}/events`,{method:'POST',body:JSON.stringify(payload)});state.selectedBarcode=barcodeValue;await loadData();toast('Марҳилаи нав ба таърихи маҳсулот илова шуд.');logistics();}
+      catch(error){toast(error.message,true);}
+    }
+
+    async function tracking(){
+      let product=null;if(state.trackBarcode){try{product=await api(`/products/${encodeURIComponent(state.trackBarcode)}`);}catch{product=null;}}
+      shell('Шиносномаи рақамӣ','Таърихи пурраи ҳаракат, масъулон ва танзими аслии 3D-и маҳсулот.','ПАЙГИРӢ · ТАЪРИХИ БЕ ТАҒЙИР',`
+        <div class="panel" style="padding:13px;margin-bottom:14px"><form class="tracking-search" id="tracking-search"><input class="input mono" id="tracking-barcode" placeholder="Рақами штрихкодро ворид кунед" value="${esc(state.trackBarcode)}"><button class="btn btn-primary" type="submit">${icon('search',14)} Ҷустуҷӯ</button></form></div>
+        ${product?passport(product):productNotFound()}`);
+      $('#tracking-search').addEventListener('submit',async event=>{event.preventDefault();const value=$('#tracking-barcode').value.trim();if(!value){toast('Рақами штрихкодро ворид кунед.',true);return;}state.trackBarcode=value;await tracking();});
+      $('#app-content').addEventListener('click',event=>{const button=event.target.closest('[data-track]');if(button)openTracking(button.dataset.track);});
+      if(product)initScene($('#scene-mini'),product.config,'mini');
+    }
+    function productNotFound(){return `<div class="split"><section class="panel"><div class="panel-head"><div><div class="panel-title">Маҳсулоти феҳрист</div><div class="panel-kicker">Барои кушодани шиноснома маҳсулотро интихоб кунед</div></div></div><div class="table-wrap"><table><thead><tr><th>НОМ</th><th>ШТРИХКОД</th><th>БАСТА</th><th>МАРҲИЛА</th></tr></thead><tbody>${state.data.products.map(item=>`<tr><td><button class="product-link" data-track="${esc(item.barcode)}">${esc(item.name)}</button></td><td class="mono-id">${esc(item.barcode)}</td><td class="mono-id">${esc(item.batch_id)}</td><td><span class="status">${esc(stageName(item.current_stage))}</span></td></tr>`).join('')}</tbody></table></div></section><section class="panel"><div class="panel-head"><div><div class="panel-title">Таърихи боваринок</div><div class="panel-kicker">Ҳар рӯйдод бо пайванди криптографӣ ҳифз мешавад</div></div></div><div style="padding:18px"><div style="font-size:28px;font-weight:700">${state.data.products.length}</div><div class="panel-kicker">маҳсулот дар феҳристи занҷири таъминот</div></div></section></div>`;}
+    function productConfigSummary(product){
+      const catalogEntry=catalogProduct(product.catalog_id);
+      const answers=(catalogEntry?.specifications||[]).map(specification=>{
+        const value=product.config[specification.key];
+        const choice=value===undefined?'сабт нашудааст':specification.options?.find(option=>option.value===value)?.label||value;
+        return `${specification.label}: ${choice}${specification.unit?' '+specification.unit:''}`;
+      });
+      return `<div class="panel-kicker">${esc(catalogEntry?.category||'Маҳсулот')} · ${esc(answers.join(' · ')||'Андоза сабт нашудааст')}</div><div style="display:flex;gap:7px;margin-top:10px;align-items:center"><span class="swatch" style="background:${esc(product.config.color)}"></span><span class="hint">Ранги асосӣ</span><span class="swatch" style="background:${esc(product.config.capColor)};margin-left:7px"></span><span class="hint">Ранги ҷузъиёти иловагӣ</span></div>`;
+    }
+    function passport(product){return `<div class="track-layout"><section class="panel"><div class="passport-head"><div class="passport-info"><div class="product-glyph">${icon('package-check',19)}</div><div><div class="passport-title">${esc(product.name)}</div><div class="passport-meta mono">${esc(product.barcode)} · Баста ${esc(product.batch_id)}</div></div></div><span class="status ${product.current_stage==='transport'?'warn':''}">${esc(stageName(product.current_stage))}</span></div><div class="timeline">${product.events.map(event=>`<article class="event"><div class="event-marker">${icon(event.stage==='factory'?'factory':event.stage==='workshop'?'scan-search':event.stage==='warehouse'?'warehouse':'truck',10)}</div><div class="event-body"><div class="event-head"><div class="event-title">${esc(stageName(event.stage))} · №${event.sequence}</div><div class="event-time">${esc(new Date(event.timestamp).toLocaleString('tg-TJ',{dateStyle:'medium',timeStyle:'short'}))}</div></div><div class="event-location">${esc(event.location_name)} · ${esc(event.region)} · ${esc(event.city)}</div><div class="event-meta"><div class="meta-item">МАСЪУЛ<strong>${esc(event.responsible_name)} · ${esc(event.responsible_role)}</strong></div><div class="meta-item">САБТКУНАНДА<strong>${esc(event.operator_name)}</strong></div>${Object.entries(event.metadata||{}).filter(([key])=>key!=='config_version').map(([key,value])=>`<div class="meta-item">${esc(metaLabel(key).toUpperCase())}<strong>${esc(value)}</strong></div>`).join('')}<div class="meta-item">РАМЗИ САНҶИШ<strong class="mono">${esc(event.event_hash.slice(0,16))}…</strong></div></div></div></article>`).join('')}</div></section><aside><section class="panel"><div class="mini-scene" id="scene-mini"><div class="mini-label">ТАРҲИ НУСХАИ АСЛӢ · 3D</div></div><div style="padding:12px 14px;border-top:1px solid var(--line)"><div class="panel-title" style="font-size:11px">Версияи аввал: ${esc(product.config_version)}</div>${productConfigSummary(product)}</div></section><section class="panel section-gap"><div class="panel-head"><div><div class="panel-title">Маълумоти баста</div><div class="panel-kicker">Таърихи тағйироти конфигуратсия</div></div></div><div style="padding:13px 15px;display:grid;gap:10px"><div class="meta-item">ВАЗН<strong>${esc(product.weight)} кг</strong></div><div class="meta-item">СИФАТ<strong>${esc(product.qc_status)}</strong></div><div class="meta-item">ВЕРСИЯҲОИ ТАРҲ<strong>${product.revisions.length}</strong></div><div class="meta-item">ЭЗОҲ<strong>${esc(product.note||'—')}</strong></div>${product.revisions.map(revision=>`<div class="meta-item">ТАРҲИ ВЕРСИЯИ ${revision.version}<strong>${esc(revision.note)} · ${esc(revision.changed_by)}</strong></div>`).join('')}</div></section></aside></div>`;}
+    function metaLabel(key){return({batch_weight_kg:'Вазни баста, кг',weight_kg:'Вазн, кг',quality:'Санҷиши сифат',note:'Эзоҳ',inspection:'Санҷиши дохилӣ',line:'Хати истеҳсол',adjustment:'Эзоҳи усто',shelf:'Рақами раф',sku:'Рақами мол',price_tjs:'Нарх, сомонӣ',temperature_c:'Ҳарорат, °C',package:'Ҳолати баста',vehicle:'Рақами мошин',driver:'Ронанда',driver_phone:'Телефони ронанда',brand:'Тамғаи мошин',route:'Масир',origin:'Аз куҷо',destination:'Ба куҷо',distance_km:'Масофа, км',eta_hours:'Вақти тахминӣ, соат',seal:'Рақами муҳр',cargo_state:'Ҳолати бор'}[key]||key.replaceAll('_',' '));}
+
+    function mdm(){
+      const resource=state.mdm;const fields=resourceFields[resource];
+      const catalogResource=resource==='product_catalog';
+      const heads=fields.map(([,label])=>`<th>${esc(label.toUpperCase())}</th>`).join('')+(catalogResource?'<th>АМАЛ</th>':'');
+      const rows=state.data[resource].map(record=>`<tr>${fields.map(([field])=>`<td>${field==='refrigerated'?record[field]?'Ҳаст':'Нест':field==='kind'?esc(locationKinds[record[field]]||record[field]):field==='model'?esc(catalogModelName(record[field])):field==='attributes'?`${record.specifications.length} атрибут`:esc(record[field])}</td>`).join('')}${catalogResource?`<td><button class="btn btn-quiet btn-small" data-add-catalog-attribute="${record.id}">${icon('plus',12)} Атрибут</button></td>`:''}</tr>`).join('');
+      shell('Маълумотномаҳои умумӣ','Номенклатураи маҳсулот ва маълумоти корхона, кормандон, нақлиёт ва масирҳо.','ИДОРАИ МАЪЛУМОТИ АСОСӢ',`
+        <div class="mdm-nav">${Object.entries(resourceNames).map(([key,name])=>`<button class="tab-btn ${resource===key?'active':''}" data-mdm="${key}">${icon(({product_catalog:'boxes',locations:'map-pin',staff:'users',vehicles:'truck',routes:'milestone'})[key],13)} ${name}<span class="mono" style="margin-left:5px;color:#839087">${state.data[key].length}</span></button>`).join('')}</div>
+        <section class="panel"><div class="panel-head"><div><div class="panel-title">${resourceNames[resource]}</div><div class="panel-kicker">${state.data[resource].length} сабт · Дар рӯйхати амалиёт истифода мешавад</div></div><div class="mdm-actions"><input class="input search-small" id="mdm-search" placeholder="Ҷустуҷӯ..."><button class="btn btn-primary" id="add-record">${icon('plus',14)} Илова кардан</button></div></div><div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody id="mdm-rows">${rows||`<tr><td colspan="${fields.length+(catalogResource?1:0)}" class="muted">Сабт нест</td></tr>`}</tbody></table></div></section>        <div class="hint" style="margin:12px 2px">${resource==='product_catalog'?'Молҳои ин феҳрист дар конструктори маҳсулот дастрас мешаванд.':'Минтақаҳо: Душанбе · Суғд · Хатлон · ВМКБ'}</div>`);
+      document.querySelectorAll('[data-mdm]').forEach(button=>button.addEventListener('click',()=>{state.mdm=button.dataset.mdm;mdm();}));
+      $('#add-record').addEventListener('click',()=>openMdmModal(resource));
+      $('#mdm-rows').addEventListener('click',event=>{const button=event.target.closest('[data-add-catalog-attribute]');if(!button)return;const product=catalogProduct(button.dataset.addCatalogAttribute);if(product)openCatalogAttributeModal(product);});
+      $('#mdm-search').addEventListener('input',event=>{const query=event.target.value.toLocaleLowerCase('tg');$('#mdm-rows').querySelectorAll('tr').forEach(row=>row.classList.toggle('hidden',!row.textContent.toLocaleLowerCase('tg').includes(query)));});
+    }
+    function openCatalogAttributeModal(product){
+      $('#modal-root').innerHTML=`<div class="modal-backdrop" id="modal-backdrop"><form class="modal" id="catalog-attribute-form" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><strong id="modal-title">Атрибути нав</strong><div class="hint">${esc(product.name)} · ${esc(product.sku)}</div></div><button class="btn icon-btn btn-quiet" type="button" id="close-modal" aria-label="Пӯшидан">${icon('x',15)}</button></div><div class="modal-body"><div class="attribute-builder-grid"><div class="field"><label for="attribute-label">Номи атрибут</label><input class="input" id="attribute-label" maxlength="80" required placeholder="Масалан: Ҳаҷми моеъ"></div><div class="field"><label for="attribute-type">Навъи ҷавоб</label><select class="select" id="attribute-type"><option value="number">Рақам</option><option value="select">Интихоб аз рӯйхат</option><option value="text">Матн</option></select></div><div class="field"><label for="attribute-unit">Воҳиди ченак</label><input class="input" id="attribute-unit" maxlength="24" placeholder="см, мл, дона"></div><div class="field"><label for="attribute-default">Қимати пешфарз</label><input class="input" id="attribute-default" type="number" value="10"></div><div class="attribute-type-fields" id="attribute-number-fields"><div class="field"><label for="attribute-min">Ҳадди ақал</label><input class="input" id="attribute-min" type="number" value="0"></div><div class="field"><label for="attribute-max">Ҳадди аксар</label><input class="input" id="attribute-max" type="number" value="100"></div><div class="field"><label for="attribute-step">Қадам</label><input class="input" id="attribute-step" type="number" min="0.001" step="any" value="1"></div></div><div class="field full hidden" id="attribute-options-field"><label for="attribute-options">Имконот, бо вергул ҷудо кунед</label><input class="input" id="attribute-options" placeholder="Хурд, Миёна, Калон"></div></div></div><div class="modal-footer"><button class="btn btn-quiet" type="button" id="cancel-modal">Бекор кардан</button><button class="btn btn-primary" type="submit">${icon('save',14)} Нигоҳ доштан</button></div></form></div>`;
+      refreshIcons();const close=()=>$('#modal-root').innerHTML='';$('#close-modal').addEventListener('click',close);$('#cancel-modal').addEventListener('click',close);$('#modal-backdrop').addEventListener('click',event=>{if(event.target.id==='modal-backdrop')close();});
+      const type=$('#attribute-type'),defaultInput=$('#attribute-default');
+      type.addEventListener('change',()=>{const numeric=type.value==='number';$('#attribute-number-fields').classList.toggle('hidden',!numeric);$('#attribute-options-field').classList.toggle('hidden',type.value!=='select');defaultInput.type=numeric?'number':'text';defaultInput.maxLength=numeric?-1:500;defaultInput.value=numeric?'10':type.value==='select'?($('#attribute-options').value.split(',').map(value=>value.trim()).filter(Boolean)[0]||''):'';});
+      $('#attribute-options').addEventListener('input',()=>{if(type.value==='select'&&!defaultInput.value.trim())defaultInput.value=$('#attribute-options').value.split(',').map(value=>value.trim()).filter(Boolean)[0]||'';});
+      $('#catalog-attribute-form').addEventListener('submit',async event=>{event.preventDefault();const label=$('#attribute-label').value.trim(),attributeType=type.value;const payload={key:`attribute_${Date.now().toString(36)}_${Math.floor(Math.random()*1000)}`,label,type:attributeType,default:attributeType==='number'?Number(defaultInput.value):defaultInput.value.trim(),unit:$('#attribute-unit').value.trim()};if(attributeType==='number'){payload.min_value=Number($('#attribute-min').value);payload.max_value=Number($('#attribute-max').value);payload.step=Number($('#attribute-step').value);if(!Number.isFinite(payload.default)||!Number.isFinite(payload.min_value)||!Number.isFinite(payload.max_value)||!Number.isFinite(payload.step)||payload.max_value<=payload.min_value||payload.step<=0||payload.default<payload.min_value||payload.default>payload.max_value){toast('Қиматҳои ададӣ ва ҳудудҳоро дуруст ворид кунед.',true);return;}}if(attributeType==='select'){payload.options=$('#attribute-options').value.split(',').map(value=>value.trim()).filter(Boolean);if(new Set(payload.options).size<2||new Set(payload.options).size!==payload.options.length||!payload.options.includes(payload.default)){toast('На камтар аз ду имконоти гуногун ворид кунед ва пешфарзро аз рӯйхат интихоб кунед.',true);return;}}try{await api(`/mdm/product_catalog/${product.id}/attributes`,{method:'POST',body:JSON.stringify(payload)});close();await loadData();mdm();toast('Атрибути нав ба феҳристи маҳсулот илова шуд.');}catch(error){toast(error.message,true);}});
+    }
+    function openMdmModal(resource){
+      const fields=resourceFields[resource];
+      const customAttributes=[];
+      let nextAttributeId=1;
+      const inputs=fields.map(([key,label])=>{
+        if(resource==='product_catalog'&&key==='attributes')return '';
+        if(resource==='product_catalog'&&key==='model')return `<div class="field"><label>${esc(label)}</label><select class="select" name="${key}" required>${Object.entries(catalogModelNames).map(([value,name])=>`<option value="${value}">${esc(name)}</option>`).join('')}</select><span class="hint">Навъ саволҳои андоза ва шакли 3D-ро муайян мекунад.</span></div>`;
+        if(resource==='product_catalog'&&key==='description')return `<div class="field full"><label>${esc(label)}</label><textarea class="textarea" name="${key}" placeholder="Тавсифи маҳсулот"></textarea></div>`;
+        if(resource==='locations'&&key==='kind')return `<div class="field"><label>${esc(label)}</label><select class="select" name="${key}" required><option value="factory">Корхона</option><option value="warehouse">Анбор</option><option value="pickup">Нуқтаи қабул</option></select></div>`;
+        if(resource==='locations'&&key==='region')return `<div class="field"><label>${esc(label)}</label><select class="select" name="${key}" required><option>Душанбе</option><option>Суғд</option><option>Хатлон</option><option>ВМКБ</option></select></div>`;
+        if(resource==='staff'&&key==='role')return `<div class="field"><label>${esc(label)}</label><select class="select" name="${key}" required>${['Роҳбари корхона','Устои сех','Анбордор','Қабулкунандаи бор','Логист','Ронанда','Оператори низом'].map(role=>`<option>${role}</option>`).join('')}</select></div>`;
+        if(resource==='vehicles'&&key==='refrigerated')return `<div class="field"><label>${esc(label)}</label><select class="select" name="${key}"><option value="false">Нест</option><option value="true">Ҳаст</option></select></div>`;
+        const numeric=['capacity','distance_km','duration_hours'].includes(key);const type=numeric?'number':'text';
+        return `<div class="field"><label>${esc(label)}</label><input class="input" name="${key}" type="${type}" ${numeric?'min="0.1" step="0.1"':''} ${resource==='product_catalog'&&key==='description'?'':'required'}></div>`;
+      }).join('');
+      const attributeEditor=resource==='product_catalog'?`<section class="attribute-builder"><div class="attribute-builder-head"><div><strong>Атрибутҳои маҳсулоти нав</strong><div class="hint">Атрибутҳоро пеш аз сабти мол илова кунед — мол ва саволҳояш якҷоя нигоҳ дошта мешаванд.</div></div><span class="scene-badge" id="attribute-count">0 / 20</span></div><div class="attribute-builder-grid"><div class="field"><label for="attribute-label">Номи атрибут</label><input class="input" id="attribute-label" maxlength="80" placeholder="Масалан: Ҳаҷми моеъ"></div><div class="field"><label for="attribute-type">Навъи ҷавоб</label><select class="select" id="attribute-type"><option value="number">Рақам</option><option value="select">Интихоб аз рӯйхат</option><option value="text">Матн</option></select></div><div class="field"><label for="attribute-unit">Воҳиди ченак</label><input class="input" id="attribute-unit" maxlength="24" placeholder="см, мл, дона"></div><div class="field" id="attribute-default-field"><label for="attribute-default">Қимати пешфарз</label><input class="input" id="attribute-default" type="number" value="10"></div><div class="attribute-type-fields" id="attribute-number-fields"><div class="field"><label for="attribute-min">Ҳадди ақал</label><input class="input" id="attribute-min" type="number" value="0"></div><div class="field"><label for="attribute-max">Ҳадди аксар</label><input class="input" id="attribute-max" type="number" value="100"></div><div class="field"><label for="attribute-step">Қадам</label><input class="input" id="attribute-step" type="number" min="0.001" step="any" value="1"></div></div><div class="field full hidden" id="attribute-options-field"><label for="attribute-options">Имконот, бо вергул ҷудо кунед</label><input class="input" id="attribute-options" placeholder="Хурд, Миёна, Калон"><span class="hint">Қимати пешфарз бояд яке аз ҳамин имконот бошад.</span></div><div class="attribute-builder-actions"><button class="btn btn-quiet" type="button" id="add-attribute">${icon('plus',14)} Иловаи атрибут</button></div></div><div class="attribute-list" id="attribute-list"><div class="hint">Ҳоло атрибути иловагӣ нест.</div></div></section>`:'';
+      $('#modal-root').innerHTML=`<div class="modal-backdrop" id="modal-backdrop"><form class="modal" id="mdm-form" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><strong id="modal-title">Сабти нав · ${esc(resourceNames[resource])}</strong><button class="btn icon-btn btn-quiet" type="button" id="close-modal" aria-label="Пӯшидан">${icon('x',15)}</button></div><div class="modal-body"><div class="form-grid" style="padding:0">${inputs}</div>${attributeEditor}</div><div class="modal-footer"><button class="btn btn-quiet" type="button" id="cancel-modal">Бекор кардан</button><button class="btn btn-primary" type="submit">${icon('save',14)} Нигоҳ доштан</button></div></form></div>`;
+      refreshIcons();const close=()=>$('#modal-root').innerHTML='';$('#close-modal').addEventListener('click',close);$('#cancel-modal').addEventListener('click',close);$('#modal-backdrop').addEventListener('click',event=>{if(event.target.id==='modal-backdrop')close();});
+      if(resource==='product_catalog'){
+        const type=$('#attribute-type'),defaultInput=$('#attribute-default');
+        const toggleAttributeType=()=>{const numeric=type.value==='number';$('#attribute-number-fields').classList.toggle('hidden',!numeric);$('#attribute-options-field').classList.toggle('hidden',type.value!=='select');defaultInput.type=numeric?'number':'text';defaultInput.maxLength=numeric?-1:500;defaultInput.value=numeric?'10':type.value==='select'?($('#attribute-options').value.split(',').map(value=>value.trim()).filter(Boolean)[0]||''):'';};
+        const renderAttributes=()=>{$('#attribute-count').textContent=`${customAttributes.length} / 20`;$(`#attribute-list`).innerHTML=customAttributes.length?customAttributes.map((attribute,index)=>`<div class="attribute-chip"><span><strong>${esc(attribute.label)}</strong><small>${esc(attribute.type)}${attribute.unit?` · ${esc(attribute.unit)}`:''}</small></span><button class="btn icon-btn btn-quiet" type="button" data-remove-attribute="${index}" aria-label="Нест кардани атрибут">${icon('x',13)}</button></div>`).join(''):'<div class="hint">Ҳоло атрибути иловагӣ нест.</div>';refreshIcons();};
+        type.addEventListener('change',toggleAttributeType);$('#attribute-options').addEventListener('input',()=>{if(type.value==='select'&&!defaultInput.value.trim())defaultInput.value=$('#attribute-options').value.split(',').map(value=>value.trim()).filter(Boolean)[0]||'';});
+        $('#add-attribute').addEventListener('click',()=>{const label=$('#attribute-label').value.trim();if(!label){toast('Номи атрибутро ворид кунед.',true);$('#attribute-label').focus();return;}if(customAttributes.length>=20){toast('Ба як маҳсулот то 20 атрибути иловагӣ илова кардан мумкин аст.',true);return;}const attributeType=type.value;const attribute={key:`attribute_${nextAttributeId++}`,label,type:attributeType,default:attributeType==='number'?Number(defaultInput.value):defaultInput.value.trim(),unit:$('#attribute-unit').value.trim()};if(attributeType==='number'){attribute.min_value=Number($('#attribute-min').value);attribute.max_value=Number($('#attribute-max').value);attribute.step=Number($('#attribute-step').value);if(!Number.isFinite(attribute.default)||!Number.isFinite(attribute.min_value)||!Number.isFinite(attribute.max_value)||!Number.isFinite(attribute.step)||attribute.max_value<=attribute.min_value||attribute.step<=0||attribute.default<attribute.min_value||attribute.default>attribute.max_value){toast('Қиматҳои ададӣ ва ҳудудҳоро дуруст ворид кунед.',true);return;}}if(attributeType==='select'){attribute.options=$('#attribute-options').value.split(',').map(value=>value.trim()).filter(Boolean);if(new Set(attribute.options).size<2||new Set(attribute.options).size!==attribute.options.length||!attribute.options.includes(attribute.default)){toast('На камтар аз ду имконоти гуногун ворид кунед ва пешфарзро аз рӯйхат интихоб кунед.',true);return;}}if(attributeType==='text'&&!attribute.default)attribute.default='';customAttributes.push(attribute);$('#attribute-label').value='';$('#attribute-unit').value='';renderAttributes();});
+        $('#attribute-list').addEventListener('click',event=>{const button=event.target.closest('[data-remove-attribute]');if(!button)return;customAttributes.splice(Number(button.dataset.removeAttribute),1);renderAttributes();});
+      }
+      $('#mdm-form').addEventListener('submit',async event=>{event.preventDefault();const values=Object.fromEntries(new FormData(event.currentTarget));for(const key of ['capacity','distance_km','duration_hours'])if(values[key]!==undefined)values[key]=Number(values[key]);if(values.refrigerated!==undefined)values.refrigerated=values.refrigerated==='true';if(resource==='product_catalog')values.attributes=customAttributes;try{await api(`/mdm/${resource}`,{method:'POST',body:JSON.stringify(values)});close();await loadData();mdm();toast(resource==='product_catalog'?'Мол бо атрибутҳояш ба феҳрист илова шуд.':'Сабт ба маълумотнома илова шуд.');}catch(error){toast(error.message,true);}});
+    }
+
+    function createScene(container,config){
+      const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(36,1,.1,100);camera.position.set(4.7,3.8,6.8);
+      const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;container.appendChild(renderer.domElement);
+      scene.add(new THREE.HemisphereLight(0xdce9dd,0x344239,2.1));const key=new THREE.DirectionalLight(0xffefd7,3.3);key.position.set(4,7,5);key.castShadow=true;scene.add(key);const fill=new THREE.DirectionalLight(0x9ac4b0,1.5);fill.position.set(-5,2,-3);scene.add(fill);
+      const floor=new THREE.Mesh(new THREE.CircleGeometry(3.1,64),new THREE.MeshStandardMaterial({color:0x29352d,roughness:.88}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;floor.receiveShadow=true;scene.add(floor);const grid=new THREE.GridHelper(6,24,0x425147,0x344038);grid.position.y=-1.035;grid.material.transparent=true;grid.material.opacity=.35;scene.add(grid);
+      const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.minDistance=3;controls.maxDistance=12;controls.target.set(0,0,0);
+      const context={scene,camera,renderer,controls,container,product:null,observer:null};updateScene(context,config);
+      const resize=()=>{const rect=container.getBoundingClientRect();if(!rect.width||!rect.height)return;camera.aspect=rect.width/rect.height;camera.updateProjectionMatrix();renderer.setSize(rect.width,rect.height,false);};context.observer=new ResizeObserver(resize);context.observer.observe(container);resize();
+      const animate=()=>{if(!container.isConnected){context.observer.disconnect();renderer.dispose();return;}requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);};animate();return context;
+    }
+    function initScene(container,config,which){if(!container)return;if(which==='main'&&state.scene){state.scene.observer?.disconnect();state.scene.renderer.dispose();state.scene=null;}if(which==='mini'&&state.miniScene){state.miniScene.observer?.disconnect();state.miniScene.renderer.dispose();state.miniScene=null;}const scene=createScene(container,config);if(which==='main')state.scene=scene;else state.miniScene=scene;}
+    function updateScene(context,config){
+      if(!context)return;if(context.product){context.scene.remove(context.product);context.product.traverse(object=>{if(object.geometry)object.geometry.dispose();if(object.material){if(Array.isArray(object.material))object.material.forEach(material=>material.dispose());else object.material.dispose();}});}
+      const group=new THREE.Group();const bodyColor=new THREE.Color(config.color||'#729c82');const capColor=new THREE.Color(config.capColor||'#d2a35e');const bodyMat=new THREE.MeshStandardMaterial({color:bodyColor,roughness:.31,metalness:.1,flatShading:config.shape==='faceted'});const capMat=new THREE.MeshStandardMaterial({color:capColor,roughness:.34});const metalMat=new THREE.MeshStandardMaterial({color:0xb5b7a9,metalness:.8,roughness:.22});const nibMat=new THREE.MeshStandardMaterial({color:0x252422,roughness:.65});const innerMat=new THREE.MeshStandardMaterial({color:0xe9e5d6,roughness:.8});
+      const add=(geometry,material,x=0,y=0,z=0)=>{const object=new THREE.Mesh(geometry,material);object.position.set(x,y,z);object.castShadow=true;object.receiveShadow=true;group.add(object);return object;};
+      const box=(width,height,depth,material,x=0,y=0,z=0)=>add(new THREE.BoxGeometry(width,height,depth),material,x,y,z);
+      const cylinder=(top,bottom,height,material,y,segments=40)=>add(new THREE.CylinderGeometry(top,bottom,height,segments),material,0,y,0);
+      const centimeters=value=>THREE.MathUtils.clamp(Number(value)||10,1,80)/10;
+      const roundRect=(width,height,radius)=>{
+        const shape=new THREE.Shape();shape.moveTo(-width/2+radius,-height/2);shape.lineTo(width/2-radius,-height/2);shape.quadraticCurveTo(width/2,-height/2,width/2,-height/2+radius);shape.lineTo(width/2,height/2-radius);shape.quadraticCurveTo(width/2,height/2,width/2-radius,height/2);shape.lineTo(-width/2+radius,height/2);shape.quadraticCurveTo(-width/2,height/2,-width/2,height/2-radius);shape.lineTo(-width/2,-height/2+radius);shape.quadraticCurveTo(-width/2,-height/2,-width/2+radius,-height/2);return shape;
+      };
+      if(config.type==='marker'){
+        const segments=config.shape==='faceted'?8:48;const length=centimeters(config.length);const radius=THREE.MathUtils.clamp(Number(config.diameter)||1.8,1.2,2.8)/20;const bodyLength=length*.72;const tipLength=length*.17;const capLength=length*.23;const top=bodyLength/2;
+        cylinder(radius*.96,radius,bodyLength,bodyMat,0,segments);
+        cylinder(radius*.97,radius*.98,.045,metalMat,top-.012,segments);
+        cylinder(radius*1.03,radius*1.03,capLength,capMat,top+capLength/2-.012,segments);
+        const clip=box(radius*.3,capLength*.76,radius*.15,capMat,radius*.83,top+capLength*.56,0);
+        const nibBase=-bodyLength/2; cylinder(radius*.7,radius*.8,.055,metalMat,nibBase+.012,segments);
+        const nib=add(new THREE.ConeGeometry(radius*.72,tipLength,segments),innerMat,0,nibBase-tipLength/2+.015,0);nib.rotation.z=Math.PI;
+        const core=add(new THREE.ConeGeometry(radius*.25,tipLength*.57,segments),nibMat,0,nibBase-tipLength*.6,0);core.rotation.z=Math.PI;
+        group.rotation.z=-.12;
+      }else if(config.type==='pen'||config.type==='pencil'){
+        const pencil=config.type==='pencil';const length=centimeters(config.length_cm);const radius=THREE.MathUtils.clamp(Number(config.diameter_mm)||(pencil?7:1),pencil?5:.6,pencil?10:1.6)/20;
+        const segments=pencil?(config.shape==='round'?40:config.shape==='triangular'?3:6):32;const shaftLength=length*.84;const shaftBottom=-shaftLength/2;const tipLength=length*.13;const top=shaftLength/2;
+        cylinder(radius,radius,shaftLength,bodyMat,0,segments);
+        const tip=add(new THREE.ConeGeometry(radius*.92,tipLength,segments),pencil?capMat:metalMat,0,shaftBottom-tipLength/2+.012,0);tip.rotation.z=Math.PI;
+        if(pencil){
+          const graphite=add(new THREE.ConeGeometry(radius*.13,tipLength*.22,segments),nibMat,0,shaftBottom-tipLength*.84,0);graphite.rotation.z=Math.PI;
+          cylinder(radius*.96,radius*.9,length*.035,capMat,top+length*.018,segments);
+        }else{
+          const capLength=length*.17;
+          cylinder(radius*1.05,radius*1.05,capLength,capMat,top+capLength/2,segments);
+          box(radius*.35,capLength*.75,radius*.17,capMat,radius*.85,top+capLength*.55,0);
+          cylinder(radius*.45,radius*.72,length*.1,metalMat,shaftBottom-length*.035,segments);
+          const point=add(new THREE.ConeGeometry(radius*.45,length*.13,segments),metalMat,0,shaftBottom-length*.14,0);point.rotation.z=Math.PI;
+          if(config.retractable==='click')cylinder(radius*.35,radius*.35,length*.07,metalMat,top+capLength+.025,segments);
+        }
+        group.rotation.z=-.12;
+      }else if(config.type==='notebook'){
+        const width=centimeters(config.width_cm);const height=centimeters(config.height_cm);const thickness=THREE.MathUtils.clamp(.12+Number(config.pages||48)/1800,.13,.36);
+        box(width,height,thickness,capMat,0,0,0);
+        box(width*.94,height*.96,thickness*.72,innerMat,0,0,thickness*.025);
+        box(width*.91,height*.96,.035,bodyMat,0,0,thickness*.47);
+        box(.045,height*.98,thickness*.82,metalMat,-width*.46,0,0);
+        if(config.ruling!=='plain'){
+          const lineMat=new THREE.MeshStandardMaterial({color:config.ruling==='grid'?0x98b6a1:0x9eb7ca,roughness:.8});
+          for(let index=0;index<7;index++)box(width*.7,.009,.012,lineMat,0,-height*.36+index*height*.1,thickness*.5);
+        }
+      }else if(config.type==='folder'){
+        const width=centimeters(config.width_cm);const height=centimeters(config.height_cm);const depth=THREE.MathUtils.clamp(Number(config.thickness_mm)||8,2,35)/100;
+        const shape=new THREE.Shape();shape.moveTo(-width/2,-height/2);shape.lineTo(width/2,-height/2);shape.lineTo(width/2,height/2);shape.lineTo(width*.16,height/2);shape.lineTo(width*.08,height*.43);shape.lineTo(-width/2,height*.43);shape.closePath();
+        const folder=new THREE.ExtrudeGeometry(shape,{depth:depth,bevelEnabled:false});folder.translate(0,0,-depth/2);add(folder,bodyMat);
+        box(width*.86,.025,.015,capMat,0,height*.31,depth/2+.01);
+      }else if(config.type==='bottle'){
+        const height=centimeters(config.height_cm);const radius=centimeters(config.diameter_cm)/2;const neck=radius*.38;
+        const points=[new THREE.Vector2(0,-height/2),new THREE.Vector2(radius*.76,-height/2),new THREE.Vector2(radius*.94,-height*.4),new THREE.Vector2(radius,-height*.25),new THREE.Vector2(radius,height*.25),new THREE.Vector2(radius*.9,height*.35),new THREE.Vector2(neck,height*.44),new THREE.Vector2(neck,height*.5)];
+        const bottleMaterial=config.material==='glass'?new THREE.MeshPhysicalMaterial({color:bodyColor,roughness:.12,metalness:.03,transparent:true,opacity:.58}):bodyMat;
+        add(new THREE.LatheGeometry(points,48),bottleMaterial);
+        cylinder(neck*1.08,neck*1.08,height*.09,capMat,height*.53,32);
+        cylinder(radius*.93,radius*.93,height*.13,capMat,height*.02,48);
+      }else if(config.type==='box'){
+        const width=centimeters(config.width_cm);const length=centimeters(config.length_cm);const height=centimeters(config.height_cm);
+        box(width,height,length,bodyMat);
+        box(width*.94,.025,length*.96,capMat,0,height/2+.015,0);
+        box(width*.1,height*.035,length*.98,capMat,0,height/2+.025,0);
+        box(width*.92,.025,.035,capMat,0,height/2+.025,length*.46);
+      }else if(config.type==='ruler'){
+        const length=centimeters(config.length_cm);const width=centimeters(config.width_cm);const baseY=.015;
+        box(length,.04,width,bodyMat,0,baseY,0);
+        const marks=new THREE.MeshStandardMaterial({color:0x27342d,roughness:.7});
+        for(let index=0;index<=20;index++){
+          const x=-length/2+length*index/20;const major=index%2===0;
+          box(length/100,major?.012:.007,major?width*.38:width*.22,marks,x,baseY+.025,width*.28);
+        }
+      }else if(config.type==='eraser'||config.type==='soap'){
+        const width=centimeters(config.width_cm);const length=centimeters(config.length_cm);const height=centimeters(config.type==='eraser'?config.thickness_cm:config.thickness_cm);
+        const shape=roundRect(width,length,Math.min(width,length)*.14);
+        const geometry=new THREE.ExtrudeGeometry(shape,{depth:height,bevelEnabled:true,bevelSegments:4,steps:1,bevelSize:Math.min(width,length,height)*.08,bevelThickness:Math.min(width,length,height)*.08});
+        geometry.translate(0,0,-height/2);add(geometry,bodyMat);
+        if(config.type==='soap')box(width*.55,.018,.02,capMat,0,length*.08,height/2+.05);
+      }else if(config.type==='mug'){
+        const height=centimeters(config.height_cm);const radius=centimeters(config.diameter_cm)/2;const wall=radius*.13;
+        cylinder(radius*.98,radius,height,bodyMat,0,48);
+        const inside=add(new THREE.CircleGeometry(radius-wall,40),nibMat,0,height*.45,0);inside.rotation.x=-Math.PI/2;
+        const rim=add(new THREE.TorusGeometry(radius-wall/2,wall/2,12,48),capMat,0,height/2-.01,0);rim.rotation.x=Math.PI/2;
+        const handle=add(new THREE.TorusGeometry(radius*.48,wall*.72,16,40),bodyMat,radius*1.18,0,0);
+        handle.scale.set(1,1.15,1);
+      }
+      group.rotation.y=-.16;context.scene.add(group);context.product=group;
+    }
+
+    async function loadData(){state.data=await api('/bootstrap');}
+    function navActive(){document.querySelectorAll('.nav-btn').forEach(button=>button.classList.toggle('active',button.dataset.view===state.view));}
+    async function navigate(view){state.view=view;state.trackBarcode='';navActive();if(view==='dashboard')dashboard();if(view==='logistics')logistics();if(view==='tracking')await tracking();if(view==='mdm')mdm();}
+    async function openTracking(value){state.trackBarcode=value;state.view='tracking';navActive();await tracking();}
+    document.querySelectorAll('.nav-btn').forEach(button=>button.addEventListener('click',()=>navigate(button.dataset.view)));
+    $('#today').textContent=new Date().toLocaleString('tg-TJ',{dateStyle:'medium'});
+    try{await loadData();dashboard();}catch(error){$('#app-content').innerHTML=`<section class="panel" style="padding:24px"><div class="panel-title">Ба феҳрист пайваст нашуд</div><p class="hint">${esc(error.message)}. Барномаро бо uvicorn app:app --reload оғоз кунед.</p><button class="btn" onclick="location.reload()">Аз нав бор кардан</button></section>`;}
+  </script>
+</body>
+</html>
