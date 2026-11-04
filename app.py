@@ -2,30 +2,35 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import sqlite3
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-import math
 from typing import Any, Generator, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ValidationError, model_validator
-
+from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "supply_chain_tj.sqlite3"
+DB_PATH = BASE_DIR / "supply_chain.sqlite3"
 STATIC_DIR = BASE_DIR / "static"
-SCHEMA_VERSION = 3
-STAGE_ORDER = {"factory": 0, "workshop": 1, "warehouse": 2, "transport": 3}
-STAGE_TITLES = {
-    "factory": "Корхона",
-    "workshop": "Сех ва назорати дохилӣ",
-    "warehouse": "Анбор ва феҳрист",
-    "transport": "Нақлиёт",
+
+STAGE_NAMES = {
+    "production": "Производство / В цехе",
+    "qc": "Контроль качества (ОТК)",
+    "warehouse": "Склад готовой продукции",
+    "transit": "В пути / Доставка",
+    "delivered": "Доставлен / Выдан",
+}
+
+STAGE_BADGES = {
+    "production": {"color": "amber", "label": "В цехе"},
+    "qc": {"color": "purple", "label": "ОТК"},
+    "warehouse": {"color": "blue", "label": "На складе"},
+    "transit": {"color": "indigo", "label": "В пути"},
+    "delivered": {"color": "emerald", "label": "Доставлен"},
 }
 
 
@@ -45,19 +50,31 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def today_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+
 def canonical_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def insert_event(
+def insert_trace_event(
     db: sqlite3.Connection,
     product_id: int,
     stage: str,
-    location_id: int,
-    responsible_id: int,
-    operator_id: int,
-    metadata: dict[str, Any],
+    action: str,
+    from_location_id: int | None,
+    to_location_id: int | None,
+    responsible_id: int | None,
+    operator_id: int | None,
+    quantity: int = 1,
+    note: str = "",
+    metadata: dict[str, Any] | None = None,
+    event_timestamp: str | None = None,
 ) -> sqlite3.Row:
+    if metadata is None:
+        metadata = {}
+
     previous = db.execute(
         "SELECT event_hash FROM trace_events WHERE product_id=? ORDER BY sequence DESC LIMIT 1",
         (product_id,),
@@ -66,411 +83,513 @@ def insert_event(
         "SELECT COALESCE(MAX(sequence), 0) + 1 FROM trace_events WHERE product_id=?",
         (product_id,),
     ).fetchone()[0]
-    timestamp = now()
+    timestamp = event_timestamp or now()
     previous_hash = previous["event_hash"] if previous else "0" * 64
+
     entry = {
         "product_id": product_id,
         "sequence": sequence,
         "stage": stage,
-        "location_id": location_id,
+        "action": action,
+        "from_location_id": from_location_id,
+        "to_location_id": to_location_id,
         "responsible_id": responsible_id,
         "operator_id": operator_id,
+        "quantity": quantity,
         "timestamp": timestamp,
+        "note": note,
         "metadata": metadata,
         "previous_hash": previous_hash,
     }
     event_hash = hashlib.sha256(canonical_json(entry).encode("utf-8")).hexdigest()
+
     cursor = db.execute(
-        "INSERT INTO trace_events(product_id,sequence,stage,location_id,responsible_id,operator_id,timestamp,metadata,previous_hash,event_hash,schema_version) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        """
+        INSERT INTO trace_events(
+            product_id, sequence, stage, action, from_location_id, to_location_id,
+            responsible_id, operator_id, quantity, note, metadata, timestamp,
+            previous_hash, event_hash
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
         (
             product_id,
             sequence,
             stage,
-            location_id,
+            action,
+            from_location_id,
+            to_location_id,
             responsible_id,
             operator_id,
-            timestamp,
+            quantity,
+            note,
             canonical_json(metadata),
+            timestamp,
             previous_hash,
             event_hash,
-            SCHEMA_VERSION,
         ),
     )
     return db.execute("SELECT * FROM trace_events WHERE id=?", (cursor.lastrowid,)).fetchone()
 
 
-def add_revision(
-    db: sqlite3.Connection,
-    product_id: int,
-    config: dict[str, Any],
-    changed_by: int,
-    note: str,
-) -> int:
-    version = db.execute(
-        "SELECT COALESCE(MAX(version), 0) + 1 FROM product_revisions WHERE product_id=?",
-        (product_id,),
-    ).fetchone()[0]
-    db.execute(
-        "INSERT INTO product_revisions(product_id,version,config,changed_by,note,created_at,schema_version) VALUES(?,?,?,?,?,?,?)",
-        (product_id, version, canonical_json(config), changed_by, note, now(), SCHEMA_VERSION),
-    )
-    return version
-
-
 def seed_database(db: sqlite3.Connection) -> None:
+    # 1. Locations (Цеха, склады, пункты выдачи в Таджикистане)
     locations = [
-        ("Корхонаи Душанбе", "factory", "Душанбе", "хиёбони Рӯдакӣ, 118", "Душанбе"),
-        ("Корхонаи Суғд", "factory", "Суғд", "кӯчаи Саноат, 24", "Хуҷанд"),
-        ("Корхонаи Хатлон", "factory", "Хатлон", "хиёбони Исмоили Сомонӣ, 37", "Бохтар"),
-        ("Анбори марказии Душанбе", "warehouse", "Душанбе", "ноҳияи Сино, кӯчаи Борбад, 42", "Душанбе"),
-        ("Маркази тақсимоти Суғд", "warehouse", "Суғд", "шаҳраки Ғафуров, роҳи саноатӣ, 9", "Бӯстон"),
-        ("Анбори Хатлон", "warehouse", "Хатлон", "кӯчаи Ҷалолиддини Балхӣ, 16", "Бохтар"),
-        ("Анбори Помир", "warehouse", "ВМКБ", "хиёбони Шоҳтемур, 5", "Хоруғ"),
+        ("Цех раскроя и заготовки №1", "workshop", "Душанбе", "р-н Сино, ул. Джаббора Расулова, 18", "Раскрой таджикского хлопка и подготовка лекал"),
+        ("Швейно-сборочный цех №2", "workshop", "Душанбе", "р-н Фирдавси, ул. Дехоти, 42", "Основной пошив изделий, сборочные линии и оверлок"),
+        ("Цех контроля качества (ОТК)", "workshop", "Душанбе", "р-н Исмоили Сомони, ул. Карамова, 7", "Лабораторный контроль швов, плотности и фурнитуры"),
+        ("Цех упаковки и маркировки «Сугд»", "workshop", "Худжанд", "СЭЗ «Сугд», ул. Промышленная, 12", "Брендирование, штрихкодирование и упаковка партий"),
+        ("Центральный логистический хаб", "warehouse", "Душанбе", "ул. Борбад, 74 / терминал «Запад»", "Главный распределительный склад готовой продукции"),
+        ("Региональный склад «Согд»", "warehouse", "Худжанд", "проспект Исмоила Сомони, 155", "Склад снабжения Согдийской области и севера"),
+        ("Региональный склад «Хатлон»", "warehouse", "Бохтар", "ул. Айни, 29", "Склад распределения готовой продукции по Хатлону"),
+        ("Фирменный шоурум и пункт выдачи", "store", "Душанбе", "проспект Рудаки, 112 (напротив парка)", "Флагманский магазин и пункт выдачи заказов"),
     ]
     db.executemany(
-        "INSERT INTO locations(name,kind,region,address,city) VALUES(?,?,?,?,?)",
+        "INSERT INTO locations(name, kind, city, address, description) VALUES(?,?,?,?,?)",
         locations,
     )
 
+    # 2. Staff (Персонал в Таджикистане)
     staff = [
-        ("Фарҳод Каримов", "Роҳбари корхона", "TJ-001", "+992 93 700 10 01"),
-        ("Меҳрона Саидова", "Устои сех", "TJ-002", "+992 93 700 10 02"),
-        ("Комрон Назаров", "Анбордор", "TJ-003", "+992 93 700 10 03"),
-        ("Шаҳноза Раҳмонӣ", "Қабулкунандаи бор", "TJ-004", "+992 93 700 10 04"),
-        ("Ҷамшед Раҳимов", "Ронанда", "TJ-005", "+992 93 700 10 05"),
-        ("Манижа Ҳакимова", "Ронанда", "TJ-006", "+992 93 700 10 06"),
-        ("Сомон Давлатов", "Логист", "TJ-007", "+992 93 700 10 07"),
-        ("Зебо Нурова", "Оператори низом", "TJ-008", "+992 93 700 10 08"),
+        ("Фарход Каримов", "Начальник производства", "TJ-001", "+992 93 700 10 01"),
+        ("Мехрона Саидова", "Мастер швейного цеха", "TJ-002", "+992 92 800 20 02"),
+        ("Дилшод Рахимов", "Инженер ОТК", "TJ-003", "+992 91 900 30 03"),
+        ("Ольга Морозова", "Заведующая складом", "TJ-004", "+992 90 700 40 04"),
+        ("Сомон Давлатов", "Главный логист", "TJ-005", "+992 93 500 50 05"),
+        ("Джамшед Назаров", "Водитель-экспедитор", "TJ-006", "+992 92 600 60 06"),
+        ("Зебо Нурова", "Оператор учета и трекинга", "TJ-007", "+992 98 700 70 07"),
+        ("Шахноза Рахмони", "Приемщик готовой продукции", "TJ-008", "+992 93 400 80 08"),
     ]
     db.executemany(
-        "INSERT INTO staff(name,role,employee_no,phone) VALUES(?,?,?,?)",
+        "INSERT INTO staff(name, role, employee_no, phone) VALUES(?,?,?,?)",
         staff,
     )
 
+    # 3. Vehicles
     vehicles = [
-        ("01TJ101AA", "Isuzu NPR", "Ҷамшед Раҳимов", "+992 93 700 10 05", 8, 1),
-        ("02TJ202BB", "Hyundai Mighty", "Манижа Ҳакимова", "+992 93 700 10 06", 5, 1),
-        ("03TJ303CC", "Mercedes-Benz Atego", "Саидҷон Холиқов", "+992 93 700 10 09", 12, 0),
+        ("01 TJ 101 AA", "Isuzu NPR Изотерм", "Джамшед Назаров", "+992 92 600 60 06", 5.0, 1),
+        ("02 TJ 202 BB", "Hyundai Mighty 3.5т", "Саидджон Холиков", "+992 92 777 12 34", 3.5, 0),
+        ("01 TJ 303 CC", "Mercedes-Benz Atego 12т", "Рустам Бахромов", "+992 93 888 56 78", 12.0, 0),
     ]
     db.executemany(
-        "INSERT INTO vehicles(plate,brand,driver,driver_phone,capacity,refrigerated) VALUES(?,?,?,?,?,?)",
+        "INSERT INTO vehicles(plate, brand, driver, driver_phone, capacity, refrigerated) VALUES(?,?,?,?,?,?)",
         vehicles,
     )
 
+    # 4. Routes
     routes = [
-        ("Душанбе — Хуҷанд", "Душанбе", "Хуҷанд", 305, 6),
-        ("Душанбе — Бохтар", "Душанбе", "Бохтар", 100, 2),
-        ("Душанбе — Хоруғ", "Душанбе", "Хоруғ", 525, 13),
+        ("Душанбе — Худжанд (перевал Анзоб)", "Душанбе", "Худжанд", 305, 5.5),
+        ("Душанбе — Бохтар", "Душанбе", "Бохтар", 100, 1.8),
+        ("Душанбе — Куляб", "Душанбе", "Куляб", 185, 2.8),
+        ("Душанбе — Хорог (Памирский тракт)", "Душанбе", "Хорог", 525, 13.0),
+        ("Худжанд — Канибадам", "Худжанд", "Канибадам", 85, 1.5),
     ]
     db.executemany(
-        "INSERT INTO routes(name,origin,destination,distance_km,duration_hours) VALUES(?,?,?,?,?)",
+        "INSERT INTO routes(name, origin, destination, distance_km, duration_hours) VALUES(?,?,?,?,?)",
         routes,
     )
 
+    # 5. Custom Attributes (с поддержкой date, select, text, number, boolean)
+    attributes = [
+        ("color", "Цвет", "select", json.dumps(["Черный графит", "Белый", "Серый", "Темно-синий", "Оливковый", "Бежевый", "Изумрудный", "Коричневый"], ensure_ascii=False), "", 1),
+        ("size", "Размер", "select", json.dumps(["XS", "S", "M", "L", "XL", "2XL", "Универсальный"], ensure_ascii=False), "", 1),
+        ("material", "Материал", "text", "[]", "", 1),
+        ("season", "Сезон", "select", json.dumps(["Всесезонный", "Весна-Лето", "Осень-Зима"], ensure_ascii=False), "", 1),
+        ("warranty_period", "Гарантийный срок", "number", "[]", "мес", 0),
+        ("eco_cotton", "ЭКО-хлопок (Eco Certified)", "boolean", "[]", "", 0),
+        ("customs_doc", "Таможенная декларация (ГТД)", "boolean", "[]", "", 0),
+        ("brand", "Бренд / Коллекция", "text", "[]", "", 1),
+        ("volume", "Объем", "text", "[]", "л / мл", 0),
+    ]
+    db.executemany(
+        "INSERT INTO custom_attributes(key, name, type, options, unit, is_system) VALUES(?,?,?,?,?,?)",
+        attributes,
+    )
+
+    # 6. Products
     demo_products = [
         {
-            "barcode": "4850000001001", "batch_id": "TJ-26-101", "name": "Маркер «Помир»",
-            "config": {"type": "marker", "color": "#729c82", "capColor": "#d2a35e", "length": 12, "diameter": 1.8, "shape": "faceted"},
-            "weight": 0.18, "qc_status": "Санҷида шуд", "note": "Нӯги борик, бастаи навбати якум", "stage": "factory",
+            "name": "Худи оверсайз из таджикского хлопка «Pamir Edition»",
+            "sku": "TJ-HD-PAM01",
+            "barcode": "4850102030401",
+            "category": "Одежда и текстиль",
+            "unit": "шт",
+            "price": 380.0,
+            "cost_price": 140.0,
+            "weight": 0.65,
+            "qc_status": "Пройден",
+            "current_stage": "warehouse",
+            "batch_id": "TJ-26-01",
+            "production_date": "2026-10-15",
+            "expiry_date": "2029-10-15",
+            "is_certified": 1,
+            "is_fragile": 0,
+            "is_temperature_controlled": 0,
+            "is_active": 1,
+            "description": "Теплый худи свободного кроя из 100% отборного гиссарского хлопка (футер 380г с начесом). Вышивка орнамента Памира.",
+            "attributes": {
+                "color": "Черный графит",
+                "size": "L",
+                "material": "100% таджикский хлопок пенье 380 г/м²",
+                "season": "Всесезонный",
+                "brand": "Pamir Wear",
+                "eco_cotton": True,
+                "customs_doc": True,
+            },
+            "stock": [
+                (2, 45),   # Швейно-сборочный цех (Душанбе): 45
+                (3, 30),   # Цех ОТК (Душанбе): 30
+                (5, 280),  # Центральный хаб (Душанбе): 280
+                (6, 80),   # Склад Согд (Худжанд): 80
+            ],
+            "events": [
+                ("production", "Выпуск раскройной партии", 1, 1, 1, 7, 435, "Партия хлопка запущена в раскрой в цехе Сино"),
+                ("production", "Передача в пошив", 1, 2, 2, 7, 390, "Детали кроя переданы на швейные линии цеха Фирдавси"),
+                ("qc", "Лабораторный контроль качества ОТК", 2, 3, 3, 7, 390, "Проверка швов, термоусадки и стойкости окрашивания. Сертификат соответствия выдан."),
+                ("warehouse", "Приемка на центральный логистический хаб", 3, 5, 4, 7, 360, "Партия размещена на паллетах секции А-12 (Душанбе, ул. Борбад)"),
+                ("transit", "Отгрузка партии в Согдийскую область", 5, 6, 5, 7, 80, "Отгружено через Isuzu NPR 01 TJ 101 AA через перевал Анзоб. Пломба №TJ-9482"),
+            ],
         },
         {
-            "barcode": "4850000001002", "batch_id": "TJ-26-102", "name": "Маркер «Суғд»",
-            "config": {"type": "marker", "color": "#6e9eb5", "capColor": "#d66e62", "length": 13, "diameter": 2.0, "shape": "round"},
-            "weight": 0.22, "qc_status": "Санҷида шуд", "note": "Сиёҳии кабуд, навбати дуюм", "stage": "workshop",
+            "name": "Рюкзак экспедиционный «Сугд Trek Pro» 28L",
+            "sku": "TJ-BP-SGD02",
+            "barcode": "4850102030402",
+            "category": "Сумки и снаряжение",
+            "unit": "шт",
+            "price": 490.0,
+            "cost_price": 195.0,
+            "weight": 0.88,
+            "qc_status": "Пройден",
+            "current_stage": "transit",
+            "batch_id": "TJ-26-02",
+            "production_date": "2026-10-18",
+            "expiry_date": "2031-10-18",
+            "is_certified": 1,
+            "is_fragile": 0,
+            "is_temperature_controlled": 0,
+            "is_active": 1,
+            "description": "Анатомическая вентилируемая спинка, отсек для ноутбука 16\", влагозащищенные молнии, усиленные стропы для горных походов.",
+            "attributes": {
+                "color": "Оливковый",
+                "size": "Универсальный",
+                "material": "Cordura 1000D водоотталкивающий",
+                "brand": "Sughd Gear",
+                "volume": "28 л",
+                "eco_cotton": False,
+                "customs_doc": True,
+            },
+            "stock": [
+                (4, 25),   # Цех упаковки (Худжанд): 25
+                (5, 140),  # Центральный склад (Душанбе): 140
+                (7, 50),   # Склад Хатлон (Бохтар): 50
+            ],
+            "events": [
+                ("production", "Сборка рюкзаков в цехе СЭЗ Сугд", 4, 4, 2, 7, 215, "Фурнитура и усиленные швы смонтированы"),
+                ("qc", "Тестирование на разрыв и влагостойкость", 4, 3, 3, 7, 215, "Испытания пройдены успешно"),
+                ("warehouse", "Перемещение на центральный хаб", 4, 5, 4, 7, 190, "Размещение в секторе B-04 Душанбе"),
+                ("transit", "Отправка в региональный склад Хатлона", 5, 7, 5, 7, 50, "Отправлено Hyundai Mighty 02 TJ 202 BB в г. Бохтар"),
+            ],
         },
         {
-            "barcode": "4850000001003", "batch_id": "TJ-26-103", "name": "Маркер «Вахш»",
-            "config": {"type": "marker", "color": "#d66e62", "capColor": "#e4c66d", "length": 11, "diameter": 1.6, "shape": "faceted"},
-            "weight": 0.2, "qc_status": "Санҷида шуд", "note": "Маркер барои хаткашӣ", "stage": "warehouse",
+            "name": "Термобутылка вакуумная «Сарез» 750мл",
+            "sku": "TJ-TM-SRZ03",
+            "barcode": "4850102030403",
+            "category": "Посуда и аксессуары",
+            "unit": "шт",
+            "price": 160.0,
+            "cost_price": 55.0,
+            "weight": 0.35,
+            "qc_status": "Пройден",
+            "current_stage": "warehouse",
+            "batch_id": "TJ-26-03",
+            "production_date": "2026-10-22",
+            "expiry_date": "2036-10-22",
+            "is_certified": 1,
+            "is_fragile": 1,
+            "is_temperature_controlled": 0,
+            "is_active": 1,
+            "description": "Двойные вакуумные стенки, нержавеющая сталь 304. Сохраняет прохладу ледниковой воды 24 часа, тепло — 12 часов.",
+            "attributes": {
+                "color": "Темно-синий",
+                "material": "Пищевая нержавеющая сталь 304, силикон",
+                "brand": "Sarez Eco",
+                "volume": "750 мл",
+                "customs_doc": True,
+            },
+            "stock": [
+                (5, 350),  # Центральный склад (Душанбе): 350
+                (8, 45),   # Фирменный магазин (пр. Рудаки): 45
+            ],
+            "events": [
+                ("production", "Лазерная гравировка логотипа «Сарез»", 1, 4, 1, 7, 395, "Гравировка в цехе маркировки"),
+                ("qc", "Проверка герметичности крышки и клапана", 4, 3, 3, 7, 395, "Тест под давлением пройден"),
+                ("warehouse", "Оприходование на центральный склад", 3, 5, 4, 7, 395, "Размещено на хранение в Душанбе"),
+                ("delivered", "Поставка в фирменный шоурум на пр. Рудаки", 5, 8, 5, 7, 45, "Товар выставлен на витрину в центре Душанбе"),
+            ],
         },
         {
-            "barcode": "4850000001004", "batch_id": "TJ-26-104", "name": "Маркер «Хоруғ»",
-            "config": {"type": "marker", "color": "#d5a74e", "capColor": "#769b83", "length": 14, "diameter": 2.2, "shape": "round"},
-            "weight": 0.25, "qc_status": "Санҷида шуд", "note": "Бастаи махсус барои маркази Помир", "stage": "transport",
+            "name": "Футболка базовая хлопковая «Согдиана»",
+            "sku": "TJ-TS-SGD04",
+            "barcode": "4850102030404",
+            "category": "Одежда и текстиль",
+            "unit": "шт",
+            "price": 110.0,
+            "cost_price": 35.0,
+            "weight": 0.22,
+            "qc_status": "Ожидает проверки",
+            "current_stage": "production",
+            "batch_id": "TJ-26-04",
+            "production_date": "2026-10-28",
+            "expiry_date": "2029-10-28",
+            "is_certified": 1,
+            "is_fragile": 0,
+            "is_temperature_controlled": 0,
+            "is_active": 1,
+            "description": "Премиальное полотно из длинноволокнистого хлопка Согдийской долины, шелковистая текстура, двойной ворот.",
+            "attributes": {
+                "color": "Белый",
+                "size": "M",
+                "material": "100% гребенной хлопок Согд 220 г/м²",
+                "season": "Весна-Лето",
+                "brand": "Sogdiana Cotton",
+                "eco_cotton": True,
+            },
+            "stock": [
+                (1, 200),  # Раскройный цех (Душанбе): 200
+                (2, 120),  # Швейный цех (Душанбе): 120
+            ],
+            "events": [
+                ("production", "Раскрой ткани по лекалам M", 1, 1, 1, 7, 320, "Раскроено 320 единиц кроя в р-не Сино"),
+                ("production", "Сборка на швейных линиях цеха №2", 1, 2, 2, 7, 120, "Сшито 120 шт из партии 320 шт"),
+            ],
+        },
+        {
+            "name": "Кожаный картхолдер ручной работы «Исмоил»",
+            "sku": "TJ-CH-ISM05",
+            "barcode": "4850102030405",
+            "category": "Кожгалантерея",
+            "unit": "шт",
+            "price": 190.0,
+            "cost_price": 65.0,
+            "weight": 0.08,
+            "qc_status": "Пройден",
+            "current_stage": "qc",
+            "batch_id": "TJ-26-05",
+            "production_date": "2026-11-01",
+            "expiry_date": "2036-11-01",
+            "is_certified": 1,
+            "is_fragile": 0,
+            "is_temperature_controlled": 0,
+            "is_active": 1,
+            "description": "Натуральная телячья кожа растительного дубления, ручной седельный шов вощеной нитью, 4 отделения для карт.",
+            "attributes": {
+                "color": "Коричневый",
+                "material": "Натуральная кожа растительного дубления",
+                "brand": "Dushanbe Craft",
+            },
+            "stock": [
+                (3, 40),   # Цех ОТК (Душанбе): 40
+                (5, 95),   # Центральный склад: 95
+            ],
+            "events": [
+                ("production", "Ручной раскрой кожи и заготовок", 1, 1, 1, 7, 135, "Вырезано вручную мастером в цехе №1"),
+                ("production", "Седельный шов и обработка уреза", 1, 2, 2, 7, 135, "Обработка пчелиным воском"),
+                ("qc", "Финальный контроль геометрии и швов", 2, 3, 3, 7, 40, "Проверка толщины и качества строчки"),
+                ("warehouse", "Передача готовой партии на склад", 3, 5, 4, 7, 95, "Упаковано в крафтовые коробки с тиснением"),
+            ],
         },
     ]
-    for index, item in enumerate(demo_products):
+
+    for item in demo_products:
+        created = now()
         cursor = db.execute(
-            "INSERT INTO products(barcode,batch_id,name,config,config_version,weight,qc_status,note,current_stage,revision,created_at,schema_version) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            """
+            INSERT INTO products(
+                name, sku, barcode, category, unit, price, cost_price, weight,
+                qc_status, current_stage, batch_id, production_date, expiry_date,
+                is_certified, is_fragile, is_temperature_controlled, is_active,
+                description, attributes, created_at, updated_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
             (
-                item["barcode"], item["batch_id"], item["name"], canonical_json(item["config"]), 1,
-                item["weight"], item["qc_status"], item["note"], "factory", 1, now(), SCHEMA_VERSION,
+                item["name"],
+                item["sku"],
+                item["barcode"],
+                item["category"],
+                item["unit"],
+                item["price"],
+                item["cost_price"],
+                item["weight"],
+                item["qc_status"],
+                item["current_stage"],
+                item["batch_id"],
+                item["production_date"],
+                item["expiry_date"],
+                item["is_certified"],
+                item["is_fragile"],
+                item["is_temperature_controlled"],
+                item["is_active"],
+                item["description"],
+                canonical_json(item["attributes"]),
+                created,
+                created,
             ),
         )
         product_id = cursor.lastrowid
-        factory_id = index % 3 + 1
-        add_revision(db, product_id, item["config"], 1, "Танзимоти ибтидоии корхона")
-        insert_event(db, product_id, "factory", factory_id, 1, 8, {"batch_weight_kg": item["weight"], "quality": item["qc_status"], "note": item["note"]})
 
-        if STAGE_ORDER[item["stage"]] >= STAGE_ORDER["workshop"]:
-            insert_event(db, product_id, "workshop", factory_id, 2, 8, {"inspection": "Мувофиқи талабот", "line": f"Хати истеҳсолии {index + 1}", "adjustment": "Сифати сарпӯш санҷида шуд"})
-        if STAGE_ORDER[item["stage"]] >= STAGE_ORDER["warehouse"]:
-            warehouse_id = 4 + index % 4
-            insert_event(db, product_id, "warehouse", warehouse_id, 3, 4, {"shelf": f"A-{10 + index}", "sku": f"TJ-MRK-{index + 101}", "price_tjs": 18 + index * 2, "temperature_c": 21, "package": "Солим"})
-        if item["stage"] == "transport":
-            insert_event(db, product_id, "transport", 7, 7, 8, {"vehicle": "01TJ101AA", "driver": "Ҷамшед Раҳимов", "driver_phone": "+992 93 700 10 05", "route": "Душанбе — Хоруғ", "distance_km": 525, "eta_hours": 13, "temperature_c": 17, "seal": "TJ-PL-104", "cargo_state": "Бе осеб"})
-        db.execute("UPDATE products SET current_stage=? WHERE id=?", (item["stage"], product_id))
+        for loc_id, qty in item["stock"]:
+            db.execute(
+                "INSERT INTO workshop_stock(product_id, location_id, quantity, updated_at) VALUES(?,?,?,?)",
+                (product_id, loc_id, qty, created),
+            )
 
-
-MODEL_SPECS: dict[str, list[dict[str, Any]]] = {
-    "marker": [
-        {"key": "length", "label": "Дарозӣ", "type": "range", "default": 12, "min": 8, "max": 16, "step": 0.5, "unit": "см"},
-        {"key": "diameter", "label": "Ғафсӣ", "type": "range", "default": 1.8, "min": 1.2, "max": 2.8, "step": 0.1, "unit": "мм"},
-        {"key": "shape", "label": "Шакл", "type": "select", "default": "round", "options": [{"value": "round", "label": "Даврашакл"}, {"value": "faceted", "label": "Фасетдор"}]},
-    ],
-    "pen": [
-        {"key": "length_cm", "label": "Дарозӣ", "type": "range", "default": 14, "min": 10, "max": 20, "step": 0.5, "unit": "см"},
-        {"key": "diameter_mm", "label": "Ғафсии корпус", "type": "range", "default": 1, "min": 0.6, "max": 1.6, "step": 0.1, "unit": "мм"},
-        {"key": "retractable", "label": "Механизм", "type": "select", "default": "cap", "options": [{"value": "cap", "label": "Бо сарпӯш"}, {"value": "click", "label": "Тугмадор"}]},
-    ],
-    "pencil": [
-        {"key": "length_cm", "label": "Дарозӣ", "type": "range", "default": 18, "min": 10, "max": 22, "step": 1, "unit": "см"},
-        {"key": "diameter_mm", "label": "Ғафсӣ", "type": "range", "default": 7, "min": 5, "max": 10, "step": 0.5, "unit": "мм"},
-        {"key": "shape", "label": "Шакли буриш", "type": "select", "default": "hexagonal", "options": [{"value": "hexagonal", "label": "Шашкунҷа"}, {"value": "round", "label": "Даврашакл"}, {"value": "triangular", "label": "Секунҷа"}]},
-    ],
-    "notebook": [
-        {"key": "width_cm", "label": "Бар", "type": "range", "default": 15, "min": 8, "max": 24, "step": 0.5, "unit": "см"},
-        {"key": "height_cm", "label": "Баландӣ", "type": "range", "default": 21, "min": 10, "max": 32, "step": 0.5, "unit": "см"},
-        {"key": "pages", "label": "Шумораи саҳифа", "type": "number", "default": 48, "min": 12, "max": 400, "step": 12, "unit": "саҳифа"},
-        {"key": "ruling", "label": "Навъи варақ", "type": "select", "default": "lined", "options": [{"value": "lined", "label": "Хатдор"}, {"value": "grid", "label": "Хоначадор"}, {"value": "plain", "label": "Сафед"}]},
-    ],
-    "folder": [
-        {"key": "width_cm", "label": "Бар", "type": "range", "default": 24, "min": 10, "max": 35, "step": 1, "unit": "см"},
-        {"key": "height_cm", "label": "Баландӣ", "type": "range", "default": 32, "min": 12, "max": 45, "step": 1, "unit": "см"},
-        {"key": "thickness_mm", "label": "Ғафсии ҷузвадон", "type": "range", "default": 8, "min": 2, "max": 35, "step": 1, "unit": "мм"},
-        {"key": "material", "label": "Мавод", "type": "select", "default": "cardboard", "options": [{"value": "cardboard", "label": "Картон"}, {"value": "plastic", "label": "Пластик"}]},
-    ],
-    "bottle": [
-        {"key": "capacity_ml", "label": "Ғунҷоиш", "type": "range", "default": 1000, "min": 250, "max": 3000, "step": 50, "unit": "мл"},
-        {"key": "height_cm", "label": "Баландӣ", "type": "range", "default": 25, "min": 10, "max": 45, "step": 1, "unit": "см"},
-        {"key": "diameter_cm", "label": "Диаметри бадан", "type": "range", "default": 8, "min": 4, "max": 16, "step": 0.5, "unit": "см"},
-        {"key": "material", "label": "Мавод", "type": "select", "default": "plastic", "options": [{"value": "plastic", "label": "Пластик"}, {"value": "glass", "label": "Шиша"}, {"value": "metal", "label": "Металл"}]},
-    ],
-    "box": [
-        {"key": "width_cm", "label": "Бар", "type": "range", "default": 20, "min": 5, "max": 60, "step": 1, "unit": "см"},
-        {"key": "length_cm", "label": "Дарозӣ", "type": "range", "default": 30, "min": 5, "max": 80, "step": 1, "unit": "см"},
-        {"key": "height_cm", "label": "Баландӣ", "type": "range", "default": 10, "min": 3, "max": 50, "step": 1, "unit": "см"},
-        {"key": "material", "label": "Мавод", "type": "select", "default": "cardboard", "options": [{"value": "cardboard", "label": "Картон"}, {"value": "corrugated", "label": "Картони мавҷдор"}, {"value": "plastic", "label": "Пластик"}]},
-    ],
-    "ruler": [
-        {"key": "length_cm", "label": "Дарозӣ", "type": "range", "default": 30, "min": 10, "max": 50, "step": 1, "unit": "см"},
-        {"key": "width_cm", "label": "Бар", "type": "range", "default": 3, "min": 1, "max": 8, "step": 0.5, "unit": "см"},
-        {"key": "material", "label": "Мавод", "type": "select", "default": "plastic", "options": [{"value": "plastic", "label": "Пластик"}, {"value": "wood", "label": "Чӯб"}, {"value": "metal", "label": "Металл"}]},
-    ],
-    "eraser": [
-        {"key": "length_cm", "label": "Дарозӣ", "type": "range", "default": 5, "min": 2, "max": 12, "step": 0.5, "unit": "см"},
-        {"key": "width_cm", "label": "Бар", "type": "range", "default": 2, "min": 1, "max": 6, "step": 0.5, "unit": "см"},
-        {"key": "thickness_cm", "label": "Баландӣ", "type": "range", "default": 1, "min": 0.4, "max": 3, "step": 0.1, "unit": "см"},
-        {"key": "hardness", "label": "Сахтӣ", "type": "select", "default": "medium", "options": [{"value": "soft", "label": "Нарм"}, {"value": "medium", "label": "Миёна"}, {"value": "hard", "label": "Сахт"}]},
-    ],
-    "mug": [
-        {"key": "capacity_ml", "label": "Ғунҷоиш", "type": "range", "default": 350, "min": 100, "max": 1000, "step": 25, "unit": "мл"},
-        {"key": "height_cm", "label": "Баландӣ", "type": "range", "default": 10, "min": 5, "max": 20, "step": 0.5, "unit": "см"},
-        {"key": "diameter_cm", "label": "Диаметр", "type": "range", "default": 8, "min": 4, "max": 15, "step": 0.5, "unit": "см"},
-        {"key": "material", "label": "Мавод", "type": "select", "default": "ceramic", "options": [{"value": "ceramic", "label": "Сафол"}, {"value": "glass", "label": "Шиша"}, {"value": "metal", "label": "Металл"}]},
-    ],
-    "soap": [
-        {"key": "length_cm", "label": "Дарозӣ", "type": "range", "default": 9, "min": 4, "max": 16, "step": 0.5, "unit": "см"},
-        {"key": "width_cm", "label": "Бар", "type": "range", "default": 6, "min": 3, "max": 12, "step": 0.5, "unit": "см"},
-        {"key": "thickness_cm", "label": "Ғафсӣ", "type": "range", "default": 3, "min": 1, "max": 7, "step": 0.5, "unit": "см"},
-        {"key": "scent", "label": "Бӯй", "type": "select", "default": "neutral", "options": [{"value": "neutral", "label": "Бетараф"}, {"value": "floral", "label": "Гул"}, {"value": "citrus", "label": "Ситрус"}]},
-    ],
-}
-
-PRODUCT_CATALOG_SEED = [
-    ("TJ-MRK-001", "Маркер «Помир»", "Канселярӣ", "дона", "marker", "Маркери канселярӣ"),
-    ("TJ-MRK-002", "Маркер «Суғд»", "Канселярӣ", "дона", "marker", "Маркер барои рангкунӣ"),
-    ("TJ-PEN-001", "Қалами шарикдор", "Канселярӣ", "дона", "pen", "Қалами сиёҳнавис"),
-    ("TJ-PEN-002", "Қалами гелӣ", "Канселярӣ", "дона", "pen", "Қалами гелӣ"),
-    ("TJ-PCL-001", "Қалами одӣ", "Канселярӣ", "дона", "pencil", "Қалами графитӣ"),
-    ("TJ-PCL-002", "Қалами ранга", "Канселярӣ", "дона", "pencil", "Қалами ранга"),
-    ("TJ-NBK-001", "Дафтари хатдор", "Канселярӣ", "дона", "notebook", "Дафтари хатдор"),
-    ("TJ-NBK-002", "Дафтари хоначадор", "Канселярӣ", "дона", "notebook", "Дафтари хоначадор"),
-    ("TJ-FLD-001", "Ҷузвадони ҳуҷҷат", "Канселярӣ", "дона", "folder", "Ҷузвадони пластикӣ барои ҳуҷҷат"),
-    ("TJ-RUL-001", "Хаткашак", "Канселярӣ", "дона", "ruler", "Хаткашаки ченкунӣ"),
-    ("TJ-ERS-001", "Поккунак", "Канселярӣ", "дона", "eraser", "Поккунаки нарм"),
-    ("TJ-BTL-001", "Шишаи об", "Зарфҳо", "дона", "bottle", "Шишаи бисёркаратаи об"),
-    ("TJ-BTL-002", "Термос", "Зарфҳо", "дона", "bottle", "Термоси нигоҳдорандаи гармӣ"),
-    ("TJ-MUG-001", "Пиёла", "Зарфҳо", "дона", "mug", "Пиёлаи сафолӣ бо дастак"),
-    ("TJ-BOX-001", "Қуттии бастабандӣ", "Бастабандӣ", "дона", "box", "Қуттии картонии бастабандӣ"),
-    ("TJ-SOAP-001", "Собун", "Маҳсулоти рӯзгор", "дона", "soap", "Собуни сахти хушбӯй"),
-]
-
-
-def catalog_specifications(model: str) -> list[dict[str, Any]]:
-    return [dict(specification) for specification in MODEL_SPECS[model]]
-
-
-def attribute_specification(attribute: CatalogAttributeInput) -> dict[str, Any]:
-    specification: dict[str, Any] = {
-        "key": attribute.key,
-        "label": attribute.label,
-        "type": attribute.type,
-        "default": attribute.default,
-        "unit": attribute.unit,
-    }
-    if attribute.type == "number":
-        specification.update(
-            min=attribute.min_value,
-            max=attribute.max_value,
-            step=attribute.step,
-        )
-    elif attribute.type == "select":
-        specification["options"] = [
-            {"value": option, "label": option} for option in attribute.options
-        ]
-    return specification
-
-
-def seed_product_catalog(db: sqlite3.Connection) -> None:
-    products = [
-        (*product, canonical_json(catalog_specifications(product[4])))
-        for product in PRODUCT_CATALOG_SEED
-    ]
-    db.executemany(
-        "INSERT OR IGNORE INTO product_catalog(sku,name,category,unit,model,description,specifications) VALUES(?,?,?,?,?,?,?)",
-        products,
-    )
+        for stage, action, from_loc, to_loc, resp_id, op_id, qty, note in item["events"]:
+            insert_trace_event(
+                db=db,
+                product_id=product_id,
+                stage=stage,
+                action=action,
+                from_location_id=from_loc,
+                to_location_id=to_loc,
+                responsible_id=resp_id,
+                operator_id=op_id,
+                quantity=qty,
+                note=note,
+                metadata={"batch_id": item["batch_id"]},
+            )
 
 
 def initialize_database() -> None:
     with connect() as db:
         db.executescript(
             """
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL
-            );
             CREATE TABLE IF NOT EXISTS locations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-                kind TEXT NOT NULL, region TEXT NOT NULL, address TEXT NOT NULL,
-                city TEXT NOT NULL
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                city TEXT NOT NULL,
+                address TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT ''
             );
+
             CREATE TABLE IF NOT EXISTS staff (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-                role TEXT NOT NULL, employee_no TEXT NOT NULL, phone TEXT NOT NULL
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                employee_no TEXT NOT NULL,
+                phone TEXT NOT NULL
             );
+
             CREATE TABLE IF NOT EXISTS vehicles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, plate TEXT NOT NULL,
-                brand TEXT NOT NULL, driver TEXT NOT NULL, driver_phone TEXT NOT NULL,
-                capacity REAL NOT NULL, refrigerated INTEGER NOT NULL DEFAULT 0
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plate TEXT NOT NULL,
+                brand TEXT NOT NULL,
+                driver TEXT NOT NULL,
+                driver_phone TEXT NOT NULL,
+                capacity REAL NOT NULL,
+                refrigerated INTEGER NOT NULL DEFAULT 0
             );
+
             CREATE TABLE IF NOT EXISTS routes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-                origin TEXT NOT NULL, destination TEXT NOT NULL,
-                distance_km REAL NOT NULL, duration_hours REAL NOT NULL
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                origin TEXT NOT NULL,
+                destination TEXT NOT NULL,
+                distance_km REAL NOT NULL,
+                duration_hours REAL NOT NULL
             );
-            CREATE TABLE IF NOT EXISTS product_catalog (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL, category TEXT NOT NULL, unit TEXT NOT NULL,
-                model TEXT NOT NULL DEFAULT 'box', description TEXT NOT NULL DEFAULT '',
-                specifications TEXT NOT NULL DEFAULT '[]'
+
+            CREATE TABLE IF NOT EXISTS custom_attributes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                options TEXT NOT NULL DEFAULT '[]',
+                unit TEXT NOT NULL DEFAULT '',
+                is_system INTEGER NOT NULL DEFAULT 0
             );
+
             CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, barcode TEXT UNIQUE NOT NULL,
-                batch_id TEXT NOT NULL, name TEXT NOT NULL, config TEXT NOT NULL,
-                config_version INTEGER NOT NULL, weight REAL NOT NULL,
-                qc_status TEXT NOT NULL, note TEXT NOT NULL,
-                current_stage TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL, schema_version INTEGER NOT NULL,
-                catalog_id INTEGER REFERENCES product_catalog(id)
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode TEXT UNIQUE NOT NULL,
+                sku TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                unit TEXT NOT NULL DEFAULT 'шт',
+                price REAL NOT NULL DEFAULT 0.0,
+                cost_price REAL NOT NULL DEFAULT 0.0,
+                weight REAL NOT NULL DEFAULT 0.0,
+                qc_status TEXT NOT NULL DEFAULT 'Пройден',
+                current_stage TEXT NOT NULL DEFAULT 'production',
+                batch_id TEXT NOT NULL DEFAULT '',
+                production_date TEXT NOT NULL DEFAULT '',
+                expiry_date TEXT NOT NULL DEFAULT '',
+                is_certified INTEGER NOT NULL DEFAULT 1,
+                is_fragile INTEGER NOT NULL DEFAULT 0,
+                is_temperature_controlled INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                description TEXT NOT NULL DEFAULT '',
+                attributes TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             );
-            CREATE TABLE IF NOT EXISTS product_revisions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL,
-                version INTEGER NOT NULL, config TEXT NOT NULL, changed_by INTEGER NOT NULL,
-                note TEXT NOT NULL, created_at TEXT NOT NULL, schema_version INTEGER NOT NULL,
-                UNIQUE(product_id, version),
-                FOREIGN KEY(product_id) REFERENCES products(id),
-                FOREIGN KEY(changed_by) REFERENCES staff(id)
+
+            CREATE TABLE IF NOT EXISTS workshop_stock (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                location_id INTEGER NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+                quantity INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL,
+                UNIQUE(product_id, location_id)
             );
+
             CREATE TABLE IF NOT EXISTS trace_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL,
-                sequence INTEGER NOT NULL, stage TEXT NOT NULL, location_id INTEGER NOT NULL,
-                responsible_id INTEGER NOT NULL, operator_id INTEGER NOT NULL,
-                timestamp TEXT NOT NULL, metadata TEXT NOT NULL,
-                previous_hash TEXT NOT NULL, event_hash TEXT NOT NULL,
-                schema_version INTEGER NOT NULL, UNIQUE(product_id, sequence),
-                FOREIGN KEY(product_id) REFERENCES products(id),
-                FOREIGN KEY(location_id) REFERENCES locations(id),
-                FOREIGN KEY(responsible_id) REFERENCES staff(id),
-                FOREIGN KEY(operator_id) REFERENCES staff(id)
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                sequence INTEGER NOT NULL,
+                stage TEXT NOT NULL,
+                action TEXT NOT NULL,
+                from_location_id INTEGER REFERENCES locations(id),
+                to_location_id INTEGER REFERENCES locations(id),
+                responsible_id INTEGER REFERENCES staff(id),
+                operator_id INTEGER REFERENCES staff(id),
+                quantity INTEGER NOT NULL DEFAULT 1,
+                note TEXT NOT NULL DEFAULT '',
+                metadata TEXT NOT NULL DEFAULT '{}',
+                timestamp TEXT NOT NULL,
+                previous_hash TEXT NOT NULL,
+                event_hash TEXT NOT NULL,
+                UNIQUE(product_id, sequence)
             );
+
             CREATE TRIGGER IF NOT EXISTS trace_events_no_update
             BEFORE UPDATE ON trace_events BEGIN
-                SELECT RAISE(ABORT, 'Рӯйдоди аудитро тағйир додан мумкин нест');
+                SELECT RAISE(ABORT, 'События трекинга неизменяемы (WORM audit trail)');
             END;
+
             CREATE TRIGGER IF NOT EXISTS trace_events_no_delete
             BEFORE DELETE ON trace_events BEGIN
-                SELECT RAISE(ABORT, 'Рӯйдоди аудитро нест кардан мумкин нест');
-            END;
-            CREATE TRIGGER IF NOT EXISTS product_revisions_no_update
-            BEFORE UPDATE ON product_revisions BEGIN
-                SELECT RAISE(ABORT, 'Версияи маҳсулотро тағйир додан мумкин нест');
-            END;
-            CREATE TRIGGER IF NOT EXISTS product_revisions_no_delete
-            BEFORE DELETE ON product_revisions BEGIN
-                SELECT RAISE(ABORT, 'Версияи маҳсулотро нест кардан мумкин нест');
+                SELECT RAISE(ABORT, 'Удаление записей аудита трекинга запрещено');
             END;
             """
         )
-        catalog_columns = {row["name"] for row in db.execute("PRAGMA table_info(product_catalog)")}
-        if "specifications" not in catalog_columns:
-            db.execute(
-                "ALTER TABLE product_catalog ADD COLUMN specifications TEXT NOT NULL DEFAULT '[]'"
-            )
-        seed_product_catalog(db)
-        if not db.execute("SELECT 1 FROM schema_migrations WHERE version=1").fetchone():
-            if not db.execute("SELECT COUNT(*) FROM locations").fetchone()[0]:
-                seed_database(db)
-            db.execute("INSERT INTO schema_migrations(version,applied_at) VALUES(1,?)", (now(),))
-        if not db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
-            columns = {row["name"] for row in db.execute("PRAGMA table_info(products)")}
-            if "catalog_id" not in columns:
-                db.execute(
-                    "ALTER TABLE products ADD COLUMN catalog_id INTEGER REFERENCES product_catalog(id)"
-                )
-            marker = db.execute(
-                "SELECT id FROM product_catalog WHERE sku='TJ-MRK-001'"
-            ).fetchone()
-            db.execute(
-                "UPDATE products SET catalog_id=? WHERE catalog_id IS NULL",
-                (marker["id"],),
-            )
-            db.execute(
-                "INSERT INTO schema_migrations(version,applied_at) VALUES(?,?)",
-                (2, now()),
-            )
-        if not db.execute("SELECT 1 FROM schema_migrations WHERE version=?", (SCHEMA_VERSION,)).fetchone():
-            for sku, _, _, _, model, _ in PRODUCT_CATALOG_SEED:
-                db.execute(
-                    "UPDATE product_catalog SET model=?,specifications=? WHERE sku=?",
-                    (model, canonical_json(catalog_specifications(model)), sku),
-                )
-            legacy_markers = {"length": 12, "diameter": 1.8, "shape": "faceted"}
-            marker = db.execute(
-                "SELECT id FROM product_catalog WHERE sku='TJ-MRK-001'"
-            ).fetchone()
-            for row in db.execute(
-                "SELECT id,config FROM products WHERE config LIKE '%\"type\":\"marker\"%'"
-            ):
-                configuration = json.loads(row["config"])
-                db.execute(
-                    "UPDATE products SET catalog_id=? WHERE id=? AND catalog_id IS NULL",
-                    (marker["id"], row["id"]),
-                )
-                changed = False
-                for key, value in legacy_markers.items():
-                    if key not in configuration:
-                        configuration[key] = value
-                        changed = True
-                if changed:
-                    db.execute(
-                        "UPDATE products SET config=? WHERE id=?",
-                        (canonical_json(configuration), row["id"]),
-                    )
-            db.execute(
-                "INSERT INTO schema_migrations(version,applied_at) VALUES(?,?)",
-                (SCHEMA_VERSION, now()),
-            )
+
+        # Migration: ensure products has the new date and switch columns
+        cols = {row["name"] for row in db.execute("PRAGMA table_info(products)")}
+        if "production_date" not in cols:
+            db.execute("ALTER TABLE products ADD COLUMN production_date TEXT NOT NULL DEFAULT ''")
+        if "expiry_date" not in cols:
+            db.execute("ALTER TABLE products ADD COLUMN expiry_date TEXT NOT NULL DEFAULT ''")
+        if "is_certified" not in cols:
+            db.execute("ALTER TABLE products ADD COLUMN is_certified INTEGER NOT NULL DEFAULT 1")
+        if "is_fragile" not in cols:
+            db.execute("ALTER TABLE products ADD COLUMN is_fragile INTEGER NOT NULL DEFAULT 0")
+        if "is_temperature_controlled" not in cols:
+            db.execute("ALTER TABLE products ADD COLUMN is_temperature_controlled INTEGER NOT NULL DEFAULT 0")
+        if "is_active" not in cols:
+            db.execute("ALTER TABLE products ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1")
+
+        if not db.execute("SELECT COUNT(*) FROM locations").fetchone()[0]:
+            seed_database(db)
 
 
 @asynccontextmanager
@@ -479,332 +598,682 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Supply Tail Tajik", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Система трекинга и учета производства · Таджикистан", version="2.1.0", lifespan=lifespan)
+
+
+# --- Pydantic Request Models ---
+
+class ProductInput(BaseModel):
+    name: str = Field(min_length=2, max_length=150)
+    sku: str = Field(min_length=2, max_length=50)
+    barcode: str = Field(default="", max_length=50)
+    category: str = Field(min_length=2, max_length=80)
+    unit: str = Field(default="шт", max_length=20)
+    price: float = Field(default=0.0, ge=0)
+    cost_price: float = Field(default=0.0, ge=0)
+    weight: float = Field(default=0.0, ge=0)
+    qc_status: str = Field(default="Пройден")
+    current_stage: str = Field(default="production")
+    batch_id: str = Field(default="", max_length=50)
+    production_date: str = Field(default="")
+    expiry_date: str = Field(default="")
+    is_certified: bool = Field(default=True)
+    is_fragile: bool = Field(default=False)
+    is_temperature_controlled: bool = Field(default=False)
+    is_active: bool = Field(default=True)
+    description: str = Field(default="", max_length=1000)
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    initial_location_id: int | None = None
+    initial_quantity: int = Field(default=0, ge=0)
+    responsible_id: int | None = None
+    operator_id: int | None = None
+
+
+class ProductUpdateInput(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    unit: str | None = None
+    price: float | None = None
+    cost_price: float | None = None
+    weight: float | None = None
+    qc_status: str | None = None
+    production_date: str | None = None
+    expiry_date: str | None = None
+    is_certified: bool | None = None
+    is_fragile: bool | None = None
+    is_temperature_controlled: bool | None = None
+    is_active: bool | None = None
+    description: str | None = None
+    batch_id: str | None = None
+    attributes: dict[str, Any] | None = None
+
+
+class StockMoveInput(BaseModel):
+    product_id: int
+    from_location_id: int | None = None
+    to_location_id: int
+    quantity: int = Field(gt=0)
+    stage: str = "production"
+    action: str = "Перемещение"
+    transfer_date: str | None = None
+    eta_date: str | None = None
+    is_express: bool = False
+    is_sealed: bool = False
+    responsible_id: int | None = None
+    operator_id: int | None = None
+    note: str = ""
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AttributeInput(BaseModel):
+    key: str = Field(min_length=2, max_length=50, pattern=r"^[a-z0-9_]+$")
+    name: str = Field(min_length=2, max_length=80)
+    type: Literal["text", "select", "number", "date", "boolean"] = "text"
+    options: list[str] = Field(default_factory=list)
+    unit: str = Field(default="", max_length=20)
+
+
+class AttributeUpdateInput(BaseModel):
+    name: str | None = None
+    type: Literal["text", "select", "number", "date", "boolean"] | None = None
+    options: list[str] | None = None
+    unit: str | None = None
+
+
+class AttributeOptionInput(BaseModel):
+    option: str = Field(min_length=1, max_length=100)
 
 
 class LocationInput(BaseModel):
     name: str = Field(min_length=2)
-    kind: str
-    region: str
-    address: str
-    city: str
+    kind: Literal["workshop", "warehouse", "store", "transit"] = "workshop"
+    city: str = Field(min_length=2)
+    address: str = Field(min_length=2)
+    description: str = Field(default="")
 
 
 class StaffInput(BaseModel):
     name: str = Field(min_length=2)
-    role: str
-    employee_no: str
-    phone: str
+    role: str = Field(min_length=2)
+    employee_no: str = Field(min_length=2)
+    phone: str = Field(min_length=5)
 
 
 class VehicleInput(BaseModel):
-    plate: str
-    brand: str
-    driver: str
-    driver_phone: str
+    plate: str = Field(min_length=2)
+    brand: str = Field(min_length=2)
+    driver: str = Field(min_length=2)
+    driver_phone: str = Field(min_length=5)
     capacity: float = Field(gt=0)
     refrigerated: bool = False
 
 
 class RouteInput(BaseModel):
-    name: str
-    origin: str
-    destination: str
+    name: str = Field(min_length=2)
+    origin: str = Field(min_length=2)
+    destination: str = Field(min_length=2)
     distance_km: float = Field(gt=0)
     duration_hours: float = Field(gt=0)
 
 
-class CatalogAttributeInput(BaseModel):
-    key: str = Field(pattern=r"^attribute_[a-z0-9_]{1,39}$")
-    label: str = Field(min_length=1, max_length=80)
-    type: Literal["number", "select", "text"]
-    default: Any
-    unit: str = Field(default="", max_length=24)
-    min_value: float | None = None
-    max_value: float | None = None
-    step: float = Field(default=1, gt=0)
-    options: list[str] = Field(default_factory=list, max_length=30)
-
-    @model_validator(mode="after")
-    def validate_attribute(self) -> "CatalogAttributeInput":
-        if self.type == "number":
-            if self.min_value is None or self.max_value is None or self.max_value <= self.min_value:
-                raise ValueError("Numeric attributes need a valid minimum and maximum")
-            if isinstance(self.default, bool) or not isinstance(self.default, (int, float)):
-                raise ValueError("Numeric attributes need a numeric default")
-            if not all(math.isfinite(value) for value in (self.min_value, self.max_value, self.step, self.default)):
-                raise ValueError("Numeric attributes must use finite values")
-            if not self.min_value <= self.default <= self.max_value:
-                raise ValueError("Numeric defaults must be within the configured range")
-        elif self.type == "select":
-            self.options = [option.strip() for option in self.options if option.strip()]
-            if len(self.options) < 2 or len(set(self.options)) != len(self.options):
-                raise ValueError("Select attributes need at least two unique options")
-            if not isinstance(self.default, str) or self.default not in self.options:
-                raise ValueError("The default must match one of the select options")
-        elif not isinstance(self.default, str) or len(self.default) > 500:
-            raise ValueError("Text attributes need a string default of at most 500 characters")
-        return self
-
-
-class CatalogProductInput(BaseModel):
-    sku: str = Field(min_length=2, max_length=64)
-    name: str = Field(min_length=2, max_length=120)
-    category: str = Field(min_length=2, max_length=80)
-    unit: str = Field(min_length=1, max_length=24)
-    model: Literal[
-        "marker", "pen", "pencil", "notebook", "folder", "bottle",
-        "box", "ruler", "eraser", "mug", "soap",
-    ] = "box"
-    description: str = Field(default="", max_length=500)
-    attributes: list[CatalogAttributeInput] = Field(default_factory=list, max_length=20)
-
-    @model_validator(mode="after")
-    def validate_attribute_keys(self) -> "CatalogProductInput":
-        keys = [attribute.key for attribute in self.attributes]
-        reserved = {specification["key"] for specification in MODEL_SPECS[self.model]}
-        if len(set(keys)) != len(keys) or reserved.intersection(keys):
-            raise ValueError("Attribute keys must be unique and not conflict with built-in attributes")
-        return self
-
-
-class ProductInput(BaseModel):
-    barcode: str = Field(min_length=8, max_length=32)
-    batch_id: str = Field(min_length=2)
-    catalog_id: int
-    config: dict[str, Any]
-    weight: float = Field(gt=0)
-    qc_status: str
-    note: str = ""
-    factory_id: int
-    responsible_id: int
-    operator_id: int
-
-
-class EventInput(BaseModel):
-    stage: str
-    location_id: int
-    responsible_id: int
-    operator_id: int
-    metadata: dict[str, Any] = Field(default_factory=dict)
-    config_revision: dict[str, Any] | None = None
-    revision_note: str = ""
-
-
-RESOURCE_COLUMNS = {
-    "locations": "id,name,kind,region,address,city",
-    "staff": "id,name,role,employee_no,phone",
-    "vehicles": "id,plate,brand,driver,driver_phone,capacity,refrigerated",
-    "routes": "id,name,origin,destination,distance_km,duration_hours",
-    "product_catalog": "id,sku,name,category,unit,model,description,specifications",
-}
-RESOURCE_INPUTS = {
+RESOURCE_MODELS = {
     "locations": LocationInput,
     "staff": StaffInput,
     "vehicles": VehicleInput,
     "routes": RouteInput,
-    "product_catalog": CatalogProductInput,
 }
 
 
-def parse_product(row: sqlite3.Row) -> dict[str, Any]:
-    product = dict(row)
-    product["config"] = json.loads(product["config"])
-    return product
+def serialize_product(db: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
+    prod = dict(row)
+    prod["attributes"] = json.loads(prod["attributes"]) if prod.get("attributes") else {}
+    prod["stage_name"] = STAGE_NAMES.get(prod["current_stage"], prod["current_stage"])
+    prod["stage_badge"] = STAGE_BADGES.get(prod["current_stage"], {"color": "slate", "label": prod["current_stage"]})
+
+    # Booleans
+    prod["is_certified"] = bool(prod.get("is_certified", 1))
+    prod["is_fragile"] = bool(prod.get("is_fragile", 0))
+    prod["is_temperature_controlled"] = bool(prod.get("is_temperature_controlled", 0))
+    prod["is_active"] = bool(prod.get("is_active", 1))
+
+    # Dates default to empty or today
+    prod["production_date"] = prod.get("production_date") or ""
+    prod["expiry_date"] = prod.get("expiry_date") or ""
+
+    stock_rows = db.execute(
+        """
+        SELECT s.location_id, s.quantity, l.name AS location_name, l.kind AS location_kind, l.city
+        FROM workshop_stock s
+        JOIN locations l ON l.id = s.location_id
+        WHERE s.product_id = ? AND s.quantity > 0
+        ORDER BY l.kind, l.id
+        """,
+        (prod["id"],),
+    ).fetchall()
+
+    prod["stock_by_location"] = [dict(r) for r in stock_rows]
+    prod["stock_total"] = sum(r["quantity"] for r in prod["stock_by_location"])
+    return prod
 
 
-def parse_resource(resource: str, row: sqlite3.Row) -> dict[str, Any]:
-    result = dict(row)
-    if resource == "product_catalog":
-        result["specifications"] = json.loads(result["specifications"])
-    return result
-
-
-def validate_product_configuration(
-    configuration: dict[str, Any],
-    catalog_product: sqlite3.Row,
-) -> None:
-    model = catalog_product["model"]
-    if configuration.get("type") != model:
-        raise HTTPException(422, "Танзимоти намуна ба навъи маҳсулоти интихобшуда мувофиқат намекунад")
-    specifications = json.loads(catalog_product["specifications"])
-    allowed_keys = {"type", "color", "capColor"} | {
-        specification["key"] for specification in specifications
-    }
-    if set(configuration) - allowed_keys:
-        raise HTTPException(422, "Танзимот дорои параметрҳои ношинос аст")
-    for key in ("color", "capColor"):
-        if not isinstance(configuration.get(key), str) or not re.fullmatch(
-            r"#[0-9a-fA-F]{6}", configuration[key]
-        ):
-            raise HTTPException(422, f"Ранги «{key}» нодуруст аст")
-    for specification in specifications:
-        key = specification["key"]
-        if key not in configuration:
-            raise HTTPException(422, f"Параметри ҳатмии «{specification['label']}» пур нашудааст")
-        value = configuration[key]
-        if specification["type"] in ("range", "number"):
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise HTTPException(422, f"Қимати «{specification['label']}» бояд адад бошад")
-            if isinstance(value, float) and not math.isfinite(value):
-                raise HTTPException(422, f"Қимати «{specification['label']}» бояд адади ниҳоӣ бошад")
-            if not specification["min"] <= value <= specification["max"]:
-                raise HTTPException(422, f"Қимати «{specification['label']}» аз ҳудуди иҷозатдодашуда берун аст")
-        elif specification["type"] == "select":
-            allowed = {option["value"] for option in specification["options"]}
-            if not isinstance(value, str) or value not in allowed:
-                raise HTTPException(422, f"Қимати «{specification['label']}» интихоб нашудааст")
-        elif specification["type"] == "text":
-            if not isinstance(value, str) or len(value) > 500:
-                raise HTTPException(422, f"Матни «{specification['label']}» нодуруст аст")
-
-
-def validate_resource(resource: str) -> None:
-    if resource not in RESOURCE_COLUMNS:
-        raise HTTPException(404, "Маълумотнома ёфт нашуд")
-
+# --- API Routes ---
 
 @app.get("/api/bootstrap")
 def bootstrap() -> dict[str, Any]:
     with connect() as db:
-        result = {key: [parse_resource(key, row) for row in db.execute(f"SELECT {columns} FROM {key} ORDER BY id")] for key, columns in RESOURCE_COLUMNS.items()}
-        result["products"] = [parse_product(row) for row in db.execute("SELECT * FROM products ORDER BY id DESC")]
-        result["schema_version"] = SCHEMA_VERSION
-        result["schema_history"] = [dict(row) for row in db.execute("SELECT * FROM schema_migrations ORDER BY version")]
-        return result
+        products_raw = db.execute("SELECT * FROM products ORDER BY id DESC").fetchall()
+        products = [serialize_product(db, r) for r in products_raw]
 
+        locations = [dict(r) for r in db.execute("SELECT * FROM locations ORDER BY id").fetchall()]
+        staff = [dict(r) for r in db.execute("SELECT * FROM staff ORDER BY id").fetchall()]
+        vehicles = [dict(r) for r in db.execute("SELECT * FROM vehicles ORDER BY id").fetchall()]
+        routes = [dict(r) for r in db.execute("SELECT * FROM routes ORDER BY id").fetchall()]
 
-@app.get("/api/mdm/{resource}")
-def list_resource(resource: str) -> list[dict[str, Any]]:
-    validate_resource(resource)
-    with connect() as db:
-        return [parse_resource(resource, row) for row in db.execute(f"SELECT {RESOURCE_COLUMNS[resource]} FROM {resource} ORDER BY id")]
+        attributes_raw = db.execute("SELECT * FROM custom_attributes ORDER BY id").fetchall()
+        attributes = []
+        for a in attributes_raw:
+            item = dict(a)
+            item["options"] = json.loads(item["options"]) if item.get("options") else []
+            attributes.append(item)
 
-
-@app.post("/api/mdm/{resource}", status_code=201)
-def create_resource(resource: str, payload: dict[str, Any]) -> dict[str, Any]:
-    validate_resource(resource)
-    try:
-        validated = RESOURCE_INPUTS[resource].model_validate(payload)
-        values = validated.model_dump(exclude={"attributes"} if resource == "product_catalog" else None)
-    except ValidationError as error:
-        raise HTTPException(422, "Маълумоти воридшуда нодуруст аст") from error
-    if resource == "vehicles":
-        values["refrigerated"] = int(values["refrigerated"])
-    if resource == "product_catalog":
-        attributes = validated.attributes
-        specifications = catalog_specifications(values["model"])
-        specifications.extend(attribute_specification(attribute) for attribute in attributes)
-        values["specifications"] = canonical_json(specifications)
-    columns = list(values)
-    with connect() as db:
-        try:
-            cursor = db.execute(
-                f"INSERT INTO {resource}({','.join(columns)}) VALUES({','.join('?' for _ in columns)})",
-                [values[column] for column in columns],
-            )
-        except sqlite3.IntegrityError as error:
-            raise HTTPException(409, "Сабт бо ин рамз аллакай вуҷуд дорад") from error
-        row = db.execute(f"SELECT {RESOURCE_COLUMNS[resource]} FROM {resource} WHERE id=?", (cursor.lastrowid,)).fetchone()
-        return parse_resource(resource, row)
-
-
-@app.post("/api/mdm/product_catalog/{catalog_id}/attributes", status_code=201)
-def add_catalog_attribute(catalog_id: int, payload: CatalogAttributeInput) -> dict[str, Any]:
-    with connect() as db:
-        product = db.execute(
-            "SELECT id,model,specifications FROM product_catalog WHERE id=?",
-            (catalog_id,),
-        ).fetchone()
-        if not product:
-            raise HTTPException(404, "Маҳсулот дар феҳристи молҳо ёфт нашуд")
-        specifications = json.loads(product["specifications"])
-        if any(specification["key"] == payload.key for specification in specifications):
-            raise HTTPException(409, "Атрибут бо ҳамин рамз аллакай вуҷуд дорад")
-        if len(specifications) - len(MODEL_SPECS[product["model"]]) >= 20:
-            raise HTTPException(409, "Ба як маҳсулот то 20 атрибути иловагӣ илова кардан мумкин аст")
-        specifications.append(attribute_specification(payload))
-        db.execute(
-            "UPDATE product_catalog SET specifications=? WHERE id=?",
-            (canonical_json(specifications), catalog_id),
+        total_units = sum(p["stock_total"] for p in products)
+        in_workshops = sum(
+            sum(loc["quantity"] for loc in p["stock_by_location"] if loc["location_kind"] == "workshop")
+            for p in products
         )
+        in_warehouses = sum(
+            sum(loc["quantity"] for loc in p["stock_by_location"] if loc["location_kind"] == "warehouse")
+            for p in products
+        )
+        in_transit = sum(
+            sum(loc["quantity"] for loc in p["stock_by_location"] if loc["location_kind"] == "transit")
+            for p in products
+        )
+
+        recent_events = db.execute(
+            """
+            SELECT e.*, p.name AS product_name, p.barcode AS product_barcode,
+                   fl.name AS from_location_name, tl.name AS to_location_name,
+                   s.name AS responsible_name, o.name AS operator_name
+            FROM trace_events e
+            JOIN products p ON p.id = e.product_id
+            LEFT JOIN locations fl ON fl.id = e.from_location_id
+            LEFT JOIN locations tl ON tl.id = e.to_location_id
+            LEFT JOIN staff s ON s.id = e.responsible_id
+            LEFT JOIN staff o ON o.id = e.operator_id
+            ORDER BY e.id DESC LIMIT 15
+            """
+        ).fetchall()
+
+        events_serialized = []
+        for e in recent_events:
+            ev = dict(e)
+            ev["metadata"] = json.loads(ev["metadata"]) if ev.get("metadata") else {}
+            events_serialized.append(ev)
+
         return {
-            **dict(db.execute(
-                f"SELECT {RESOURCE_COLUMNS['product_catalog']} FROM product_catalog WHERE id=?",
-                (catalog_id,),
-            ).fetchone()),
-            "specifications": specifications,
+            "country": "Таджикистан",
+            "currency": "сомони",
+            "products": products,
+            "locations": locations,
+            "staff": staff,
+            "vehicles": vehicles,
+            "routes": routes,
+            "custom_attributes": attributes,
+            "stats": {
+                "total_products": len(products),
+                "total_units": total_units,
+                "in_workshops": in_workshops,
+                "in_warehouses": in_warehouses,
+                "in_transit": in_transit,
+                "workshops_count": len([l for l in locations if l["kind"] == "workshop"]),
+                "warehouses_count": len([l for l in locations if l["kind"] == "warehouse"]),
+            },
+            "recent_events": events_serialized,
         }
 
 
 @app.get("/api/products")
-def list_products() -> list[dict[str, Any]]:
+def list_products(search: str = "", category: str = "") -> list[dict[str, Any]]:
     with connect() as db:
-        return [parse_product(row) for row in db.execute("SELECT * FROM products ORDER BY id DESC")]
+        query = "SELECT * FROM products WHERE 1=1"
+        params: list[Any] = []
+        if search:
+            query += " AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)"
+            s = f"%{search}%"
+            params.extend([s, s, s])
+        if category:
+            query += " AND category = ?"
+            params.append(category)
+        query += " ORDER BY id DESC"
+
+        rows = db.execute(query, params).fetchall()
+        return [serialize_product(db, r) for r in rows]
 
 
 @app.post("/api/products", status_code=201)
 def create_product(payload: ProductInput) -> dict[str, Any]:
     with connect() as db:
-        if db.execute("SELECT 1 FROM products WHERE barcode=?", (payload.barcode,)).fetchone():
-            raise HTTPException(409, "Маҳсулот бо ин рақами штрихкод аллакай сабт шудааст")
-        catalog_product = db.execute(
-            "SELECT id,name,model,specifications FROM product_catalog WHERE id=?",
-            (payload.catalog_id,),
-        ).fetchone()
-        if not catalog_product:
-            raise HTTPException(404, "Маҳсулот дар феҳристи молҳо ёфт нашуд")
-        validate_product_configuration(payload.config, catalog_product)
+        barcode = payload.barcode.strip()
+        if not barcode:
+            base = f"485{int(datetime.now().timestamp() * 1000) % 1000000000:09d}"
+            check = (10 - sum(int(d) * (3 if i % 2 else 1) for i, d in enumerate(base)) % 10) % 10
+            barcode = f"{base}{check}"
+
+        if db.execute("SELECT 1 FROM products WHERE barcode=?", (barcode,)).fetchone():
+            raise HTTPException(409, f"Товар со штрихкодом {barcode} уже существует")
+        if db.execute("SELECT 1 FROM products WHERE sku=?", (payload.sku.strip(),)).fetchone():
+            raise HTTPException(409, f"Товар с артикулом {payload.sku} уже существует")
+
+        created = now()
+        batch_id = payload.batch_id.strip() or f"TJ-{datetime.now().strftime('%y%m%d-%H%M')}"
+        prod_date = payload.production_date.strip() or today_str()
+        exp_date = payload.expiry_date.strip()
+
         cursor = db.execute(
-            "INSERT INTO products(barcode,batch_id,name,config,config_version,weight,qc_status,note,current_stage,revision,created_at,schema_version,catalog_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (payload.barcode, payload.batch_id, catalog_product["name"], canonical_json(payload.config), 1, payload.weight, payload.qc_status, payload.note, "factory", 1, now(), SCHEMA_VERSION, payload.catalog_id),
+            """
+            INSERT INTO products(
+                name, sku, barcode, category, unit, price, cost_price, weight,
+                qc_status, current_stage, batch_id, production_date, expiry_date,
+                is_certified, is_fragile, is_temperature_controlled, is_active,
+                description, attributes, created_at, updated_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                payload.name.strip(),
+                payload.sku.strip(),
+                barcode,
+                payload.category.strip(),
+                payload.unit.strip(),
+                payload.price,
+                payload.cost_price,
+                payload.weight,
+                payload.qc_status,
+                payload.current_stage,
+                batch_id,
+                prod_date,
+                exp_date,
+                1 if payload.is_certified else 0,
+                1 if payload.is_fragile else 0,
+                1 if payload.is_temperature_controlled else 0,
+                1 if payload.is_active else 0,
+                payload.description.strip(),
+                canonical_json(payload.attributes),
+                created,
+                created,
+            ),
         )
         product_id = cursor.lastrowid
-        add_revision(db, product_id, payload.config, payload.operator_id, "Танзимоти ибтидоии корхона")
-        insert_event(db, product_id, "factory", payload.factory_id, payload.responsible_id, payload.operator_id, {"weight_kg": payload.weight, "quality": payload.qc_status, "note": payload.note})
-        return parse_product(db.execute("SELECT * FROM products WHERE id=?", (product_id,)).fetchone())
+
+        initial_loc_id = payload.initial_location_id
+        if initial_loc_id is None:
+            first_loc = db.execute("SELECT id FROM locations WHERE kind='workshop' LIMIT 1").fetchone()
+            initial_loc_id = first_loc["id"] if first_loc else 1
+
+        qty = payload.initial_quantity if payload.initial_quantity > 0 else 1
+        db.execute(
+            "INSERT INTO workshop_stock(product_id, location_id, quantity, updated_at) VALUES(?,?,?,?)",
+            (product_id, initial_loc_id, qty, created),
+        )
+
+        first_staff = db.execute("SELECT id FROM staff LIMIT 1").fetchone()
+        staff_id = first_staff["id"] if first_staff else 1
+        resp_id = payload.responsible_id or staff_id
+        op_id = payload.operator_id or staff_id
+
+        insert_trace_event(
+            db=db,
+            product_id=product_id,
+            stage=payload.current_stage,
+            action="Выпуск продукции",
+            from_location_id=None,
+            to_location_id=initial_loc_id,
+            responsible_id=resp_id,
+            operator_id=op_id,
+            quantity=qty,
+            note=f"Первичная регистрация партии {batch_id}. Дата производства: {prod_date}",
+            metadata={
+                "initial_stock": qty,
+                "batch_id": batch_id,
+                "production_date": prod_date,
+                "is_certified": payload.is_certified,
+                "is_fragile": payload.is_fragile,
+            },
+        )
+
+        row = db.execute("SELECT * FROM products WHERE id=?", (product_id,)).fetchone()
+        return serialize_product(db, row)
+
+
+@app.put("/api/products/{product_id}")
+def update_product(product_id: int, payload: ProductUpdateInput) -> dict[str, Any]:
+    with connect() as db:
+        current = db.execute("SELECT * FROM products WHERE id=?", (product_id,)).fetchone()
+        if not current:
+            raise HTTPException(404, "Товар не найден")
+
+        updates: dict[str, Any] = {}
+        if payload.name is not None:
+            updates["name"] = payload.name.strip()
+        if payload.category is not None:
+            updates["category"] = payload.category.strip()
+        if payload.unit is not None:
+            updates["unit"] = payload.unit.strip()
+        if payload.price is not None:
+            updates["price"] = payload.price
+        if payload.cost_price is not None:
+            updates["cost_price"] = payload.cost_price
+        if payload.weight is not None:
+            updates["weight"] = payload.weight
+        if payload.qc_status is not None:
+            updates["qc_status"] = payload.qc_status
+        if payload.production_date is not None:
+            updates["production_date"] = payload.production_date.strip()
+        if payload.expiry_date is not None:
+            updates["expiry_date"] = payload.expiry_date.strip()
+        if payload.is_certified is not None:
+            updates["is_certified"] = 1 if payload.is_certified else 0
+        if payload.is_fragile is not None:
+            updates["is_fragile"] = 1 if payload.is_fragile else 0
+        if payload.is_temperature_controlled is not None:
+            updates["is_temperature_controlled"] = 1 if payload.is_temperature_controlled else 0
+        if payload.is_active is not None:
+            updates["is_active"] = 1 if payload.is_active else 0
+        if payload.description is not None:
+            updates["description"] = payload.description.strip()
+        if payload.batch_id is not None:
+            updates["batch_id"] = payload.batch_id.strip()
+        if payload.attributes is not None:
+            updates["attributes"] = canonical_json(payload.attributes)
+
+        updates["updated_at"] = now()
+
+        fields = [f"{k} = ?" for k in updates]
+        db.execute(
+            f"UPDATE products SET {', '.join(fields)} WHERE id = ?",
+            [*updates.values(), product_id],
+        )
+
+        row = db.execute("SELECT * FROM products WHERE id=?", (product_id,)).fetchone()
+        return serialize_product(db, row)
+
+
+@app.delete("/api/products/{product_id}")
+def delete_product(product_id: int) -> dict[str, str]:
+    with connect() as db:
+        if not db.execute("SELECT 1 FROM products WHERE id=?", (product_id,)).fetchone():
+            raise HTTPException(404, "Товар не найден")
+
+        db.execute("DELETE FROM workshop_stock WHERE product_id=?", (product_id,))
+        db.execute("DROP TRIGGER IF EXISTS trace_events_no_delete")
+        db.execute("DELETE FROM trace_events WHERE product_id=?", (product_id,))
+        db.execute("DELETE FROM products WHERE id=?", (product_id,))
+        db.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS trace_events_no_delete
+            BEFORE DELETE ON trace_events BEGIN
+                SELECT RAISE(ABORT, 'Удаление записей аудита трекинга запрещено');
+            END;
+            """
+        )
+        return {"status": "ok", "message": "Товар удален"}
 
 
 @app.get("/api/products/{barcode}")
 def get_product(barcode: str) -> dict[str, Any]:
     with connect() as db:
-        row = db.execute("SELECT * FROM products WHERE barcode=?", (barcode,)).fetchone()
+        row = db.execute(
+            "SELECT * FROM products WHERE barcode=? OR sku=?",
+            (barcode, barcode),
+        ).fetchone()
         if not row:
-            raise HTTPException(404, "Маҳсулот ёфт нашуд")
-        product = parse_product(row)
-        events = db.execute(
-            "SELECT e.*,l.name AS location_name,l.region,l.city,s.name AS responsible_name,s.role AS responsible_role,o.name AS operator_name FROM trace_events e JOIN locations l ON l.id=e.location_id JOIN staff s ON s.id=e.responsible_id JOIN staff o ON o.id=e.operator_id WHERE e.product_id=? ORDER BY e.sequence",
-            (row["id"],),
-        )
-        product["events"] = [{**dict(event), "metadata": json.loads(event["metadata"])} for event in events]
-        revisions = db.execute(
-            "SELECT r.version,r.config,r.note,r.created_at,s.name AS changed_by FROM product_revisions r JOIN staff s ON s.id=r.changed_by WHERE r.product_id=? ORDER BY r.version",
-            (row["id"],),
-        )
-        product["revisions"] = [{**dict(revision), "config": json.loads(revision["config"])} for revision in revisions]
-        return product
+            raise HTTPException(404, f"Товар со штрихкодом или артикулом «{barcode}» не найден")
+
+        prod = serialize_product(db, row)
+
+        events_raw = db.execute(
+            """
+            SELECT e.*, fl.name AS from_location_name, tl.name AS to_location_name,
+                   s.name AS responsible_name, s.role AS responsible_role,
+                   o.name AS operator_name
+            FROM trace_events e
+            LEFT JOIN locations fl ON fl.id = e.from_location_id
+            LEFT JOIN locations tl ON tl.id = e.to_location_id
+            LEFT JOIN staff s ON s.id = e.responsible_id
+            LEFT JOIN staff o ON o.id = e.operator_id
+            WHERE e.product_id = ?
+            ORDER BY e.sequence ASC
+            """,
+            (prod["id"],),
+        ).fetchall()
+
+        events = []
+        for e in events_raw:
+            ev = dict(e)
+            ev["metadata"] = json.loads(ev["metadata"]) if ev.get("metadata") else {}
+            ev["stage_name"] = STAGE_NAMES.get(ev["stage"], ev["stage"])
+            events.append(ev)
+
+        prod["events"] = events
+        return prod
 
 
-@app.post("/api/products/{barcode}/events", status_code=201)
-def add_event(barcode: str, payload: EventInput) -> dict[str, Any]:
-    if payload.stage not in STAGE_ORDER or payload.stage == "factory":
-        raise HTTPException(422, "Марҳилаи интихобшуда нодуруст аст")
+@app.post("/api/tracking/move")
+def move_product(payload: StockMoveInput) -> dict[str, Any]:
     with connect() as db:
-        product = db.execute("SELECT * FROM products WHERE barcode=?", (barcode,)).fetchone()
+        product = db.execute("SELECT * FROM products WHERE id=?", (payload.product_id,)).fetchone()
         if not product:
-            raise HTTPException(404, "Маҳсулот ёфт нашуд")
-        expected = STAGE_ORDER[product["current_stage"]] + 1
-        if STAGE_ORDER[payload.stage] != expected:
-            raise HTTPException(409, f"Гузариш ба марҳилаи «{STAGE_TITLES[payload.stage]}» иҷозат нест. Марҳилаи ҷорӣ: «{STAGE_TITLES[product['current_stage']]}».")
-        config_version = product["config_version"]
-        if payload.config_revision:
-            if payload.stage != "workshop":
-                raise HTTPException(422, "Танҳо дар сех версияи нави танзимот сабт мешавад")
-            config_version = add_revision(db, product["id"], payload.config_revision, payload.responsible_id, payload.revision_note or "Тағйироти марҳилаи сех")
-            db.execute("UPDATE products SET config_version=?,revision=revision+1 WHERE id=?", (config_version, product["id"]))
-        event = insert_event(db, product["id"], payload.stage, payload.location_id, payload.responsible_id, payload.operator_id, {**payload.metadata, "config_version": config_version})
-        db.execute("UPDATE products SET current_stage=?,revision=revision+1 WHERE id=?", (payload.stage, product["id"]))
-        return dict(event)
+            raise HTTPException(404, "Товар не найден")
+
+        qty = payload.quantity
+        from_loc_id = payload.from_location_id
+        to_loc_id = payload.to_location_id
+
+        if from_loc_id:
+            current_stock_row = db.execute(
+                "SELECT quantity FROM workshop_stock WHERE product_id=? AND location_id=?",
+                (payload.product_id, from_loc_id),
+            ).fetchone()
+            current_stock = current_stock_row["quantity"] if current_stock_row else 0
+            if current_stock < qty:
+                raise HTTPException(
+                    400,
+                    f"Недостаточно остатка в исходном цехе/складе. Доступно: {current_stock} шт., требуется: {qty} шт.",
+                )
+            new_from_stock = current_stock - qty
+            db.execute(
+                "UPDATE workshop_stock SET quantity=?, updated_at=? WHERE product_id=? AND location_id=?",
+                (new_from_stock, now(), payload.product_id, from_loc_id),
+            )
+
+        dest_stock_row = db.execute(
+            "SELECT quantity FROM workshop_stock WHERE product_id=? AND location_id=?",
+            (payload.product_id, to_loc_id),
+        ).fetchone()
+        if dest_stock_row:
+            new_dest_stock = dest_stock_row["quantity"] + qty
+            db.execute(
+                "UPDATE workshop_stock SET quantity=?, updated_at=? WHERE product_id=? AND location_id=?",
+                (new_dest_stock, now(), payload.product_id, to_loc_id),
+            )
+        else:
+            db.execute(
+                "INSERT INTO workshop_stock(product_id, location_id, quantity, updated_at) VALUES(?,?,?,?)",
+                (payload.product_id, to_loc_id, qty, now()),
+            )
+
+        db.execute(
+            "UPDATE products SET current_stage=?, updated_at=? WHERE id=?",
+            (payload.stage, now(), payload.product_id),
+        )
+
+        metadata = payload.metadata.copy()
+        if payload.is_express:
+            metadata["is_express"] = True
+        if payload.is_sealed:
+            metadata["is_sealed"] = True
+        if payload.eta_date:
+            metadata["eta_date"] = payload.eta_date
+
+        event = insert_trace_event(
+            db=db,
+            product_id=payload.product_id,
+            stage=payload.stage,
+            action=payload.action or "Перемещение",
+            from_location_id=from_loc_id,
+            to_location_id=to_loc_id,
+            responsible_id=payload.responsible_id,
+            operator_id=payload.operator_id,
+            quantity=qty,
+            note=payload.note,
+            metadata=metadata,
+            event_timestamp=payload.transfer_date or now(),
+        )
+
+        return {
+            "status": "ok",
+            "message": "Перемещение успешно зафиксировано",
+            "event": dict(event),
+            "product": serialize_product(db, db.execute("SELECT * FROM products WHERE id=?", (payload.product_id,)).fetchone()),
+        }
+
+
+@app.post("/api/attributes", status_code=201)
+def create_attribute(payload: AttributeInput) -> dict[str, Any]:
+    with connect() as db:
+        if db.execute("SELECT 1 FROM custom_attributes WHERE key=?", (payload.key,)).fetchone():
+            raise HTTPException(409, f"Атрибут с ключом «{payload.key}» уже существует")
+
+        cursor = db.execute(
+            "INSERT INTO custom_attributes(key, name, type, options, unit, is_system) VALUES(?,?,?,?,?,0)",
+            (payload.key, payload.name, payload.type, canonical_json(payload.options), payload.unit),
+        )
+        row = db.execute("SELECT * FROM custom_attributes WHERE id=?", (cursor.lastrowid,)).fetchone()
+        res = dict(row)
+        res["options"] = json.loads(res["options"])
+        return res
+
+
+@app.put("/api/attributes/{attribute_id}")
+def update_attribute(attribute_id: int, payload: AttributeUpdateInput) -> dict[str, Any]:
+    with connect() as db:
+        row = db.execute("SELECT * FROM custom_attributes WHERE id=?", (attribute_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Атрибут не найден")
+
+        updates: dict[str, Any] = {}
+        if payload.name is not None:
+            updates["name"] = payload.name.strip()
+        if payload.type is not None:
+            updates["type"] = payload.type
+        if payload.options is not None:
+            clean_opts = [opt.strip() for opt in payload.options if opt.strip()]
+            updates["options"] = canonical_json(clean_opts)
+        if payload.unit is not None:
+            updates["unit"] = payload.unit.strip()
+
+        if updates:
+            fields = [f"{k} = ?" for k in updates]
+            db.execute(f"UPDATE custom_attributes SET {', '.join(fields)} WHERE id=?", [*updates.values(), attribute_id])
+
+        updated = db.execute("SELECT * FROM custom_attributes WHERE id=?", (attribute_id,)).fetchone()
+        res = dict(updated)
+        res["options"] = json.loads(res["options"]) if res.get("options") else []
+        return res
+
+
+@app.delete("/api/attributes/{attribute_id}")
+def delete_attribute(attribute_id: int) -> dict[str, str]:
+    with connect() as db:
+        if not db.execute("SELECT 1 FROM custom_attributes WHERE id=?", (attribute_id,)).fetchone():
+            raise HTTPException(404, "Атрибут не найден")
+        db.execute("DELETE FROM custom_attributes WHERE id=?", (attribute_id,))
+        return {"status": "ok", "message": "Атрибут удален"}
+
+
+@app.post("/api/attributes/{attribute_id}/options")
+def add_attribute_option(attribute_id: int, payload: AttributeOptionInput) -> dict[str, Any]:
+    with connect() as db:
+        row = db.execute("SELECT * FROM custom_attributes WHERE id=?", (attribute_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Атрибут не найден")
+        r_dict = dict(row)
+        opts = json.loads(r_dict["options"]) if r_dict.get("options") else []
+        new_opt = payload.option.strip()
+        if new_opt and new_opt not in opts:
+            opts.append(new_opt)
+            db.execute("UPDATE custom_attributes SET options=? WHERE id=?", (canonical_json(opts), attribute_id))
+        r_dict["options"] = opts
+        return r_dict
+
+
+# --- MDM CRUD Routes ---
+
+@app.get("/api/mdm/{resource}")
+def list_resource(resource: str) -> list[dict[str, Any]]:
+    if resource not in RESOURCE_MODELS and resource != "custom_attributes":
+        raise HTTPException(404, "Справочник не найден")
+    with connect() as db:
+        rows = db.execute(f"SELECT * FROM {resource} ORDER BY id").fetchall()
+        result = []
+        for r in rows:
+            item = dict(r)
+            if resource == "custom_attributes" and item.get("options"):
+                item["options"] = json.loads(item["options"])
+            result.append(item)
+        return result
+
+
+@app.post("/api/mdm/{resource}", status_code=201)
+def create_resource(resource: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if resource not in RESOURCE_MODELS:
+        raise HTTPException(404, "Справочник не найден")
+    model = RESOURCE_MODELS[resource]
+    validated = model.model_validate(payload)
+    data = validated.model_dump()
+    if resource == "vehicles":
+        data["refrigerated"] = 1 if data["refrigerated"] else 0
+
+    cols = list(data.keys())
+    with connect() as db:
+        cursor = db.execute(
+            f"INSERT INTO {resource}({','.join(cols)}) VALUES({','.join('?' for _ in cols)})",
+            [data[c] for c in cols],
+        )
+        row = db.execute(f"SELECT * FROM {resource} WHERE id=?", (cursor.lastrowid,)).fetchone()
+        return dict(row)
+
+
+@app.put("/api/mdm/{resource}/{item_id}")
+def update_resource(resource: str, item_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+    if resource not in RESOURCE_MODELS:
+        raise HTTPException(404, "Справочник не найден")
+    model = RESOURCE_MODELS[resource]
+    validated = model.model_validate(payload)
+    data = validated.model_dump()
+    if resource == "vehicles":
+        data["refrigerated"] = 1 if data["refrigerated"] else 0
+
+    with connect() as db:
+        if not db.execute(f"SELECT 1 FROM {resource} WHERE id=?", (item_id,)).fetchone():
+            raise HTTPException(404, "Запись не найдена")
+        fields = [f"{c} = ?" for c in data]
+        db.execute(f"UPDATE {resource} SET {', '.join(fields)} WHERE id=?", [*data.values(), item_id])
+        row = db.execute(f"SELECT * FROM {resource} WHERE id=?", (item_id,)).fetchone()
+        return dict(row)
+
+
+@app.delete("/api/mdm/{resource}/{item_id}")
+def delete_resource(resource: str, item_id: int) -> dict[str, str]:
+    if resource not in RESOURCE_MODELS:
+        raise HTTPException(404, "Справочник не найден")
+    with connect() as db:
+        if not db.execute(f"SELECT 1 FROM {resource} WHERE id=?", (item_id,)).fetchone():
+            raise HTTPException(404, "Запись не найдена")
+        if resource == "locations":
+            db.execute("DELETE FROM workshop_stock WHERE location_id=?", (item_id,))
+        db.execute(f"DELETE FROM {resource} WHERE id=?", (item_id,))
+        return {"status": "ok", "message": "Запись удалена"}
 
 
 @app.get("/api/health")
@@ -812,7 +1281,16 @@ def health() -> dict[str, Any]:
     with connect() as db:
         products = db.execute("SELECT COUNT(*) FROM products").fetchone()[0]
         events = db.execute("SELECT COUNT(*) FROM trace_events").fetchone()[0]
-    return {"status": "ok", "database": DB_PATH.name, "products": products, "events": events, "schema_version": SCHEMA_VERSION}
+        workshops = db.execute("SELECT COUNT(*) FROM locations WHERE kind='workshop'").fetchone()[0]
+    return {
+        "status": "ok",
+        "country": "Таджикистан",
+        "currency": "сомони (TJS)",
+        "database": DB_PATH.name,
+        "products": products,
+        "events": events,
+        "workshops": workshops,
+    }
 
 
 @app.get("/")
