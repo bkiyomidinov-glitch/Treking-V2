@@ -668,6 +668,281 @@
       .stats-grid { grid-template-columns: 1fr; }
       .timeline-steps { grid-template-columns: 1fr; }
     }
+
+    /* ==========================================================================
+       Light Theme Support
+       ========================================================================== */
+    body.light-theme {
+      --bg: #f8fafc;
+      --sidebar: #ffffff;
+      --panel: #ffffff;
+      --panel-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --border-light: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #64748b;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-glow: rgba(2, 132, 199, 0.15);
+      background: #f8fafc !important;
+      color: #0f172a !important;
+    }
+    body.light-theme ::-webkit-scrollbar-track { background: #f8fafc; }
+    body.light-theme ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    body.light-theme ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    body.light-theme .sidebar {
+      background: #ffffff !important;
+      border-right-color: #e2e8f0 !important;
+    }
+    body.light-theme .brand-box {
+      border-bottom-color: #e2e8f0 !important;
+    }
+    body.light-theme .brand-title div:first-child {
+      color: #0f172a !important;
+    }
+    body.light-theme .sidebar-footer {
+      border-top-color: #e2e8f0 !important;
+    }
+    body.light-theme .nav-item {
+      color: #475569 !important;
+    }
+    body.light-theme .nav-item:hover {
+      background: #f1f5f9 !important;
+      border-color: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+    body.light-theme .nav-item.active {
+      color: #0284c7 !important;
+      background: rgba(2, 132, 199, 0.1) !important;
+      border-color: rgba(2, 132, 199, 0.3) !important;
+    }
+    body.light-theme .nav-item.active span {
+      color: #0284c7 !important;
+    }
+    body.light-theme .nav-badge {
+      background: #e2e8f0 !important;
+      color: #475569 !important;
+    }
+
+    body.light-theme .topbar {
+      background: rgba(255, 255, 255, 0.92) !important;
+      border-bottom-color: #e2e8f0 !important;
+    }
+    body.light-theme .topbar-search {
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-theme .topbar-search input {
+      color: #0f172a !important;
+    }
+    body.light-theme .topbar-search input::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    body.light-theme .page-title {
+      color: #0f172a !important;
+    }
+    body.light-theme .card {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+    }
+    body.light-theme .card-head {
+      border-bottom-color: #e2e8f0 !important;
+      background: #f8fafc !important;
+    }
+    body.light-theme .card-title {
+      color: #0f172a !important;
+    }
+
+    body.light-theme .stat-card {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    }
+    body.light-theme .stat-card-value {
+      color: #0f172a !important;
+    }
+    body.light-theme .stat-card-icon {
+      background: #f1f5f9 !important;
+    }
+
+    body.light-theme .btn {
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #1e293b !important;
+    }
+    body.light-theme .btn:hover {
+      background: #f8fafc !important;
+      border-color: #94a3b8 !important;
+      color: #0f172a !important;
+    }
+    body.light-theme .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb) !important;
+      border-color: #0284c7 !important;
+      color: #ffffff !important;
+    }
+    body.light-theme .btn-accent {
+      background: linear-gradient(135deg, #059669, #047857) !important;
+      border-color: #059669 !important;
+      color: #ffffff !important;
+    }
+
+    body.light-theme table {
+      color: #0f172a !important;
+    }
+    body.light-theme th {
+      background: #f8fafc !important;
+      border-bottom-color: #e2e8f0 !important;
+      color: #64748b !important;
+    }
+    body.light-theme td {
+      border-bottom-color: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+    body.light-theme tbody tr:hover {
+      background: #f8fafc !important;
+    }
+    body.light-theme tbody tr td div[style*="color:#fff"],
+    body.light-theme tbody tr td span[style*="color:#fff"],
+    body.light-theme tbody tr td strong[style*="color:#fff"] {
+      color: #0f172a !important;
+    }
+
+    body.light-theme .input,
+    body.light-theme .select,
+    body.light-theme .textarea {
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-theme .input:focus,
+    body.light-theme .select:focus,
+    body.light-theme .textarea:focus {
+      border-color: #0284c7 !important;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15) !important;
+    }
+    body.light-theme input[type="date"],
+    body.light-theme input[type="datetime-local"] {
+      color-scheme: light !important;
+    }
+    body.light-theme input[type="date"]::-webkit-calendar-picker-indicator,
+    body.light-theme input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: none !important;
+      opacity: 0.7 !important;
+    }
+
+    body.light-theme .switch-row {
+      background: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+    }
+    body.light-theme .switch-row:hover {
+      background: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .switch-title {
+      color: #0f172a !important;
+    }
+    body.light-theme .switch-slider {
+      background-color: #cbd5e1 !important;
+      border-color: #94a3b8 !important;
+    }
+    body.light-theme .switch-slider:before {
+      background-color: #ffffff !important;
+    }
+    body.light-theme .switch input:checked + .switch-slider {
+      background: linear-gradient(135deg, #0284c7, #2563eb) !important;
+      border-color: #0284c7 !important;
+    }
+
+    body.light-theme .modal-backdrop {
+      background: rgba(15, 23, 42, 0.5) !important;
+    }
+    body.light-theme .modal-box {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      color: #0f172a !important;
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.15) !important;
+    }
+    body.light-theme .modal-head {
+      border-bottom-color: #e2e8f0 !important;
+    }
+    body.light-theme .modal-head div,
+    body.light-theme .modal-head span {
+      color: #0f172a !important;
+    }
+    body.light-theme .modal-footer {
+      border-top-color: #e2e8f0 !important;
+      background: #f8fafc !important;
+    }
+    body.light-theme .modal-body div[style*="color:#fff"] {
+      color: #0f172a !important;
+    }
+
+    body.light-theme .badge-slate {
+      background: #f1f5f9 !important;
+      color: #334155 !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .badge-amber {
+      background: #fef3c7 !important;
+      color: #92400e !important;
+      border-color: #fde68a !important;
+    }
+    body.light-theme .badge-blue {
+      background: #e0f2fe !important;
+      color: #0369a1 !important;
+      border-color: #bae6fd !important;
+    }
+    body.light-theme .badge-emerald {
+      background: #d1fae5 !important;
+      color: #065f46 !important;
+      border-color: #a7f3d0 !important;
+    }
+    body.light-theme .badge-purple {
+      background: #f3e8ff !important;
+      color: #6b21a8 !important;
+      border-color: #e9d5ff !important;
+    }
+    body.light-theme .badge-indigo {
+      background: #e0e7ff !important;
+      color: #3730a3 !important;
+      border-color: #c7d2fe !important;
+    }
+
+    body.light-theme .tag-attr {
+      background: #f1f5f9 !important;
+      border-color: #e2e8f0 !important;
+      color: #475569 !important;
+    }
+    body.light-theme .tag-attr strong {
+      color: #0f172a !important;
+    }
+    body.light-theme .workshop-pill {
+      background: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+    }
+
+    body.light-theme .toast {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1) !important;
+    }
+    body.light-theme .toast.success {
+      background: #ecfdf5 !important;
+      color: #065f46 !important;
+      border-color: #a7f3d0 !important;
+    }
+    body.light-theme .toast.error {
+      background: #fef2f2 !important;
+      color: #991b1b !important;
+      border-color: #fecaca !important;
+    }
+
   </style>
 </head>
 <body>
@@ -702,6 +977,10 @@
       </button>
 
       <div class="nav-group-title">Настройки</div>
+      <button class="nav-item" data-view="categories">
+        <i data-lucide="folder-tree" width="16"></i>
+        <span>Категории</span>
+      </button>
       <button class="nav-item" data-view="attributes">
         <i data-lucide="tag" width="16"></i>
         <span>Атрибуты товаров</span>
@@ -730,7 +1009,19 @@
           <button type="submit" class="btn btn-sm btn-primary" style="padding:3px 8px;">Найти</button>
         </form>
 
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-sm" id="btn-theme-toggle" onclick="toggleTheme()" title="Светлая / Тёмная тема" style="display:flex; align-items:center; gap:6px;">
+            <span id="theme-toggle-icon">☀️</span>
+            <span id="theme-toggle-label" style="font-size:11px;">Светлая</span>
+          </button>
+          <button class="btn btn-sm" onclick="openDisplaySettingsModal()" title="Настройка видимости колонок (Категории, Цены, Даты)" style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="sliders-horizontal" width="13"></i>
+            <span style="font-size:11px;">Вид таблицы</span>
+          </button>
+          <button class="btn btn-sm" onclick="openSystemResetModal()" title="Очистка и сброс данных" style="color:var(--red); padding:6px 9px;">
+            <i data-lucide="database-zap" width="13"></i>
+          </button>
+          <div style="width:1px; height:22px; background:var(--border);"></div>
           <button class="btn btn-primary" id="btn-open-create-product">
             <i data-lucide="plus" width="14"></i>
             <span>Добавить товар</span>
@@ -771,7 +1062,29 @@
       selectedBarcode: '',
       filterCategory: '',
       searchQuery: '',
+      displaySettings: JSON.parse(localStorage.getItem('promtrek_display') || '{"showCategories":true,"showPrices":true,"showDates":true}'),
     };
+
+    // --- Theme Management (Light & Dark) ---
+    function initTheme() {
+      const saved = localStorage.getItem('promtrek_theme') || 'dark';
+      setTheme(saved);
+    }
+
+    function setTheme(mode) {
+      const isLight = mode === 'light';
+      document.body.classList.toggle('light-theme', isLight);
+      const icon = document.getElementById('theme-toggle-icon');
+      const label = document.getElementById('theme-toggle-label');
+      if (icon) icon.textContent = isLight ? '🌙' : '☀️';
+      if (label) label.textContent = isLight ? 'Тёмная' : 'Светлая';
+      localStorage.setItem('promtrek_theme', isLight ? 'light' : 'dark');
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.contains('light-theme');
+      setTheme(isLight ? 'dark' : 'light');
+    }
 
     // --- API Helpers ---
     async function api(path, options = {}) {
@@ -813,7 +1126,11 @@
 
     // --- Formatters & Helpers ---
     const esc = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const money = num => `${Math.round(num || 0).toLocaleString('ru-RU')} сомони`;
+    const money = num => {
+      const val = parseFloat(num);
+      if (!val || val <= 0) return '—';
+      return `${Math.round(val).toLocaleString('ru-RU')} сомони`;
+    };
     const dateStr = iso => iso ? new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
     const dateOnly = str => str ? new Date(str).toLocaleDateString('ru-RU') : '—';
 
@@ -850,7 +1167,294 @@
 
     // --- VIEWS ---
 
-    // 1. Dashboard View
+
+    // --- Category Management Functions ---
+    async function openCreateCategoryModal() {
+      const name = prompt('Введите наименование новой категории товаров:');
+      if (!name || !name.trim()) return;
+      try {
+        await api('/categories', { method: 'POST', body: JSON.stringify({ name: name.trim() }) });
+        toast(`Категория «${name.trim()}» успешно добавлена!`, 'success');
+        await loadData();
+        await switchView(state.currentView);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function quickAddCategoryPrompt(targetSelectId = 'prod-category-select') {
+      const name = prompt('Введите название новой категории:');
+      if (!name || !name.trim()) return;
+      const clean = name.trim();
+      try {
+        await api('/categories', { method: 'POST', body: JSON.stringify({ name: clean }) });
+        if (!state.data.categories.includes(clean)) {
+          state.data.categories.push(clean);
+          state.data.categories.sort();
+        }
+        const sel = document.getElementById(targetSelectId);
+        if (sel) {
+          const opt = document.createElement('option');
+          opt.value = clean;
+          opt.textContent = clean;
+          sel.appendChild(opt);
+          sel.value = clean;
+        }
+        toast(`Категория «${clean}» создана и выбрана!`, 'success');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function renameCategoryPrompt(oldName) {
+      const newName = prompt(`Введите новое название для категории «${oldName}»:`, oldName);
+      if (!newName || !newName.trim() || newName.trim() === oldName) return;
+      try {
+        const catList = await api('/categories');
+        const existing = catList.find(c => c.name === oldName);
+        if (existing && existing.id) {
+          await api(`/categories/${existing.id}`, { method: 'PUT', body: JSON.stringify({ name: newName.trim() }) });
+        } else {
+          await api('/categories', { method: 'POST', body: JSON.stringify({ name: newName.trim() }) });
+          await api(`/categories/${encodeURIComponent(oldName)}`, { method: 'DELETE' });
+        }
+        toast(`Категория переименована в «${newName.trim()}»!`, 'success');
+        await loadData();
+        await switchView(state.currentView);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function deleteCategoryPrompt(name) {
+      if (!confirm(`Вы действительно хотите удалить категорию «${name}»?\nПривязанные к ней товары сохранятся и перейдут в статус «Без категории».`)) return;
+      try {
+        await api(`/categories/${encodeURIComponent(name)}`, { method: 'DELETE' });
+        toast(`Категория «${name}» удалена!`, 'info');
+        await loadData();
+        await switchView(state.currentView);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    function filterAndShowCategory(cat) {
+      state.filterCategory = cat;
+      switchView('products');
+    }
+
+    // Category View
+    function renderCategories() {
+      const categories = state.data.categories || [];
+      const products = state.data.products || [];
+
+      const counts = {};
+      for (const p of products) {
+        const c = p.category || '';
+        counts[c] = (counts[c] || 0) + 1;
+      }
+
+      return `
+        <div class="page-header">
+          <div>
+            <h1 class="page-title"><i data-lucide="folder-tree" width="22" style="color:var(--primary)"></i>Управление категориями товаров</h1>
+            <div class="page-desc">Создание, редактирование, удаление категорий номенклатуры или полный отказ от них</div>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" onclick="openCreateCategoryModal()"><i data-lucide="plus" width="14"></i>Добавить категорию</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px; padding:14px 18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="font-size:12px; color:var(--text-muted);">
+              Категории в системе являются абсолютно опциональными. Вы можете свободно добавлять их, изменять, удалять или вообще скрыть колонку категорий из таблиц каталога.
+            </div>
+            <button class="btn btn-sm" onclick="openDisplaySettingsModal()"><i data-lucide="sliders-horizontal" width="13"></i>Настройка видимости колонок</button>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+          ${categories.length === 0 ? `
+            <div class="card" style="padding:48px 24px; text-align:center; grid-column:1/-1; color:var(--text-muted);">
+              <div style="width:48px; height:48px; border-radius:50%; background:rgba(56,189,248,0.1); display:grid; place-items:center; margin:0 auto 14px; color:var(--primary);">
+                <i data-lucide="folder-plus" width="24"></i>
+              </div>
+              <div style="font-weight:700; font-size:15px; color:#fff; margin-bottom:6px;">Категории пока не созданы</div>
+              <div style="font-size:12px; margin-bottom:16px; max-width:480px; margin-left:auto; margin-right:auto;">
+                Вы можете работать без категорий вовсе (оставляя поле пустым) либо создать индивидуальные категории для своего производства:
+              </div>
+              <button class="btn btn-primary" onclick="openCreateCategoryModal()"><i data-lucide="plus" width="14"></i>Создать первую категорию</button>
+            </div>
+          ` : categories.map(cat => {
+            const count = counts[cat] || 0;
+            return `
+              <div class="card">
+                <div class="card-head">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:34px; height:34px; border-radius:8px; background:rgba(56,189,248,0.1); color:var(--primary); display:grid; place-items:center;">
+                      <i data-lucide="folder" width="18"></i>
+                    </div>
+                    <div>
+                      <div class="card-title" style="color:#fff; font-size:14px;">${esc(cat)}</div>
+                      <div style="font-size:11px; color:var(--text-dim); margin-top:1px;">${count} товаров в базе</div>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button class="btn btn-sm btn-icon" title="Переименовать категорию" onclick="renameCategoryPrompt('${esc(cat)}')"><i data-lucide="edit-2" width="13"></i></button>
+                    <button class="btn btn-sm btn-icon" style="color:var(--red);" title="Удалить категорию" onclick="deleteCategoryPrompt('${esc(cat)}')"><i data-lucide="trash-2" width="13"></i></button>
+                  </div>
+                </div>
+                <div style="padding:12px 18px; display:flex; justify-content:space-between; align-items:center;">
+                  <span class="badge badge-slate" style="font-size:11px;">Привязано товаров: <strong>${count}</strong></span>
+                  <button class="btn btn-sm" style="font-size:11px;" onclick="filterAndShowCategory('${esc(cat)}')">Открыть товары →</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    // --- Column Visibility & Display Settings Modal ---
+    function openDisplaySettingsModal() {
+      const s = state.displaySettings;
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(500px, 100%);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="sliders-horizontal" width="18" style="color:var(--primary)"></i>
+                <span>Настройка видимости колонок в таблицах</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <div class="modal-body" style="display:grid; gap:12px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+                Включайте или отключайте колонки в таблицах каталога и дашборда по вашему желанию:
+              </div>
+
+              <div class="switch-row">
+                <div class="switch-info">
+                  <div class="switch-title">Отображать колонку «Категория»</div>
+                  <div class="switch-desc">Если номенклатура не делится на категории, колонку можно отключить</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" ${s.showCategories ? 'checked' : ''} onchange="updateDisplaySetting('showCategories', this.checked)">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="switch-row">
+                <div class="switch-info">
+                  <div class="switch-title">Отображать цены и себестоимость</div>
+                  <div class="switch-desc">Для сугубо цехового учета количества (штук) колонку цен можно скрыть</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" ${s.showPrices ? 'checked' : ''} onchange="updateDisplaySetting('showPrices', this.checked)">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="switch-row">
+                <div class="switch-info">
+                  <div class="switch-title">Отображать даты производства и сроки годности</div>
+                  <div class="switch-desc">Календарные даты выпуска партий и сроки хранения</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" ${s.showDates ? 'checked' : ''} onchange="updateDisplaySetting('showDates', this.checked)">
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" onclick="closeModal()">Готово</button>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateDisplaySetting(key, val) {
+      state.displaySettings[key] = val;
+      localStorage.setItem('promtrek_display', JSON.stringify(state.displaySettings));
+      switchView(state.currentView);
+    }
+
+    // --- System Reset & Clear Data Modal ---
+    function openSystemResetModal() {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(520px, 100%);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="database-zap" width="18" style="color:var(--red)"></i>
+                <span>Управление базой данных и очистка</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <div class="modal-body" style="display:grid; gap:16px;">
+              <div style="font-size:12px; color:var(--text-muted);">
+                Вы можете очистить товары или полностью обнулить базу, чтобы вести абсолютно индивидуальный учет цехов, маршрутов и номенклатуры:
+              </div>
+
+              <div style="padding:14px; border:1px solid rgba(244, 63, 94, 0.3); background:rgba(244, 63, 94, 0.05); border-radius:8px;">
+                <div style="font-weight:700; color:#fff; font-size:13px; margin-bottom:4px;">1. Очистить только товары и партии</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+                  Удалит всю номенклатуру, остатки в цехах и журнал перемещений. Ваши цеха, сотрудники, транспорт и маршруты сохранятся.
+                </div>
+                <button class="btn btn-sm" style="border-color:var(--red); color:#fff; background:rgba(244, 63, 94, 0.25);" onclick="clearProductsOnly()"><i data-lucide="trash-2" width="13"></i>Очистить все товары</button>
+              </div>
+
+              <div style="padding:14px; border:1px solid rgba(239, 68, 68, 0.5); background:rgba(239, 68, 68, 0.1); border-radius:8px;">
+                <div style="font-weight:700; color:#fff; font-size:13px; margin-bottom:4px;">2. Полная очистка всей системы (С чистого листа)</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+                  Удалит абсолютно все записи: цеха, персонал, транспорт, маршруты, категории и товары. База SQLite станет 100% чистой.
+                </div>
+                <button class="btn btn-sm" style="background:#dc2626; border-color:#ef4444; color:#fff;" onclick="clearAllData()"><i data-lucide="alert-triangle" width="13"></i>Сбросить всю базу данных</button>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn" onclick="closeModal()">Закрыть</button>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function clearProductsOnly() {
+      if (!confirm('Вы уверены, что хотите удалить все товары, партии и историю трекинга?')) return;
+      try {
+        await api('/system/clear-products', { method: 'POST' });
+        closeModal();
+        toast('Все товары и партии успешно очищены!', 'success');
+        await loadData();
+        await switchView(state.currentView);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function clearAllData() {
+      const code = prompt('ВНИМАНИЕ! Для полного сброса всех таблиц введите слово "СБРОС":');
+      if (code !== 'СБРОС') {
+        if (code !== null) toast('Сброс отменен (неверное подтверждение)', 'info');
+        return;
+      }
+      try {
+        await api('/system/clear-all', { method: 'POST' });
+        closeModal();
+        toast('База данных полностью очищена! Теперь система готова для вашей индивидуальной настройки.', 'success');
+        await loadData();
+        await switchView(state.currentView);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+        // 1. Dashboard View
     function renderDashboard() {
       const stats = state.data.stats;
       const products = state.data.products;
@@ -1017,9 +1621,9 @@
               <thead>
                 <tr>
                   <th>Товар / Артикул</th>
-                  <th>Категория</th>
-                  <th>Параметры & Даты</th>
-                  <th>Цена</th>
+                  ${state.displaySettings.showCategories ? '<th>Категория</th>' : ''}
+                  <th>Параметры ${state.displaySettings.showDates ? '& Даты' : ''}</th>
+                  ${state.displaySettings.showPrices ? '<th>Цена</th>' : ''}
                   <th>Остаток в цехах / складах</th>
                   <th>Всего</th>
                   <th>Этап</th>
@@ -1033,16 +1637,16 @@
                       <div style="font-weight:600; color:#fff;">${esc(p.name)}</div>
                       <div class="mono" style="font-size:11px; color:var(--primary);">${esc(p.sku)} · ${esc(p.barcode)}</div>
                     </td>
-                    <td><span class="badge badge-slate">${esc(p.category)}</span></td>
+                    ${state.displaySettings.showCategories ? `<td><span class="badge badge-slate">${esc(p.category || 'Без категории')}</span></td>` : ''}
                     <td>
                       <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
                         ${p.is_certified ? '<span class="badge badge-emerald" style="font-size:9px; padding:1px 5px;">✓ Сертификат</span>' : ''}
                         ${p.is_temperature_controlled ? '<span class="badge badge-blue" style="font-size:9px; padding:1px 5px;">❄ Терморежим</span>' : ''}
                         ${p.is_fragile ? '<span class="badge badge-amber" style="font-size:9px; padding:1px 5px;">⚠ Хрупкое</span>' : ''}
                       </div>
-                      ${p.production_date ? `<div style="font-size:10px; color:var(--text-dim);">Пр-во: <strong>${dateOnly(p.production_date)}</strong></div>` : ''}
+                      ${state.displaySettings.showDates && p.production_date ? `<div style="font-size:10px; color:var(--text-dim);">Пр-во: <strong>${dateOnly(p.production_date)}</strong></div>` : ''}
                     </td>
-                    <td class="mono" style="font-weight:600;">${money(p.price)}</td>
+                    ${state.displaySettings.showPrices ? `<td class="mono" style="font-weight:600;">${money(p.price)}</td>` : ''}
                     <td>
                       ${p.stock_by_location.map(loc => `
                         <span class="workshop-pill">
@@ -1071,7 +1675,11 @@
     // 2. Products Catalog View
     function renderProducts() {
       const products = state.data.products;
-      const categories = [...new Set(products.map(p => p.category))];
+      const categories = sortedCategories();
+      function sortedCategories() {
+        const set = new Set([...(state.data.categories || []), ...products.map(p => p.category).filter(Boolean)]);
+        return Array.from(set).sort();
+      }
 
       return `
         <div class="page-header">
@@ -1094,6 +1702,7 @@
             <div style="min-width:180px;">
               <select class="select" id="catalog-cat-filter" onchange="filterCategory(this.value)">
                 <option value="">Все категории (${products.length})</option>
+                <option value="__none__" ${state.filterCategory==='__none__'?'selected':''}>Без категории</option>
                 ${categories.map(c => `<option value="${esc(c)}" ${state.filterCategory===c?'selected':''}>${esc(c)}</option>`).join('')}
               </select>
             </div>
@@ -1108,10 +1717,10 @@
               <thead>
                 <tr>
                   <th>Товар / Артикул / Штрихкод</th>
-                  <th>Категория</th>
-                  <th>Даты и Флаги (Switch)</th>
+                  ${state.displaySettings.showCategories ? '<th>Категория</th>' : ''}
+                  <th>Флаги ${state.displaySettings.showDates ? '& Даты' : ''}</th>
                   <th>Характеристики</th>
-                  <th>Цена / Себест.</th>
+                  ${state.displaySettings.showPrices ? '<th>Цена / Себест.</th>' : ''}
                   <th>Остаток в цехах и складах</th>
                   <th>Всего шт</th>
                   <th>Контроль ОТК</th>
@@ -1121,7 +1730,7 @@
               </thead>
               <tbody>
                 ${products.map(p => `
-                  <tr data-name="${esc(p.name).toLowerCase()}" data-sku="${esc(p.sku).toLowerCase()}" data-barcode="${esc(p.barcode)}" data-cat="${esc(p.category)}">
+                  <tr data-name="${esc(p.name).toLowerCase()}" data-sku="${esc(p.sku).toLowerCase()}" data-barcode="${esc(p.barcode)}" data-cat="${esc(p.category || '')}">
                     <td>
                       <div style="font-weight:700; color:#fff; font-size:13px;">${esc(p.name)}</div>
                       <div class="mono" style="font-size:11px; color:var(--primary); margin-top:2px;">
@@ -1129,25 +1738,26 @@
                       </div>
                       <div style="font-size:10px; color:var(--text-dim); margin-top:1px;">Партия: ${esc(p.batch_id || '—')}</div>
                     </td>
-                    <td><span class="badge badge-slate">${esc(p.category)}</span></td>
+                    ${state.displaySettings.showCategories ? `<td><span class="badge badge-slate">${esc(p.category || 'Без категории')}</span></td>` : ''}
                     <td>
                       <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
                         ${p.is_certified ? '<span class="badge badge-emerald" style="font-size:9px; padding:1px 5px;">✓ Сертификат</span>' : ''}
                         ${p.is_temperature_controlled ? '<span class="badge badge-blue" style="font-size:9px; padding:1px 5px;">❄ Термо</span>' : ''}
                         ${p.is_fragile ? '<span class="badge badge-amber" style="font-size:9px; padding:1px 5px;">⚠ Хрупкое</span>' : ''}
                       </div>
-                      <div style="font-size:10px; color:var(--text-dim);">Пр-во: <strong style="color:#e2e8f0;">${dateOnly(p.production_date)}</strong></div>
-                      ${p.expiry_date ? `<div style="font-size:10px; color:var(--text-dim);">Срок: <strong>${dateOnly(p.expiry_date)}</strong></div>` : ''}
+                      ${state.displaySettings.showDates && p.production_date ? `<div style="font-size:10px; color:var(--text-dim);">Пр-во: <strong style="color:#e2e8f0;">${dateOnly(p.production_date)}</strong></div>` : ''}
+                      ${state.displaySettings.showDates && p.expiry_date ? `<div style="font-size:10px; color:var(--text-dim);">Срок: <strong>${dateOnly(p.expiry_date)}</strong></div>` : ''}
                     </td>
                     <td style="max-width:200px;">
                       ${Object.entries(p.attributes || {}).map(([k, v]) => `
                         <span class="tag-attr"><span>${esc(k)}:</span><strong>${typeof v==='boolean' ? (v?'Да':'Нет') : esc(v)}</strong></span>
                       `).join('') || '<span style="color:var(--text-dim)">—</span>'}
                     </td>
+                    ${state.displaySettings.showPrices ? `
                     <td class="mono">
                       <div style="font-weight:700; color:#fff;">${money(p.price)}</div>
                       <div style="font-size:10px; color:var(--text-dim);">Себ: ${money(p.cost_price)}</div>
-                    </td>
+                    </td>` : ''}
                     <td>
                       ${p.stock_by_location.map(loc => `
                         <div class="workshop-pill" style="margin-bottom:3px;">
@@ -1864,6 +2474,7 @@
       const root = document.getElementById('main-content');
       if (view === 'dashboard') root.innerHTML = renderDashboard();
       else if (view === 'products') root.innerHTML = renderProducts();
+      else if (view === 'categories') root.innerHTML = renderCategories();
       else if (view === 'workshops') root.innerHTML = renderWorkshops();
       else if (view === 'tracking') root.innerHTML = await renderTracking();
       else if (view === 'attributes') root.innerHTML = renderAttributes();
@@ -1899,7 +2510,7 @@
         const rowCat = r.dataset.cat || '';
 
         const matchQ = !q || name.includes(q) || sku.includes(q) || barcode.includes(q);
-        const matchCat = !cat || rowCat === cat;
+        const matchCat = !cat || (cat === '__none__' ? !rowCat : rowCat === cat);
 
         r.style.display = matchQ && matchCat ? '' : 'none';
       });
@@ -1967,8 +2578,14 @@
                     </div>
                   </div>
                   <div class="field">
-                    <label>Категория *</label>
-                    <input class="input" name="category" placeholder="Одежда, Текстиль, Кожгалантерея, Посуда..." required>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="margin:0;">Категория (необязательно)</label>
+                      <button type="button" class="btn btn-sm" style="font-size:10px; padding:1px 6px; height:20px;" onclick="quickAddCategoryPrompt('create-prod-cat-select')">+ Категория</button>
+                    </div>
+                    <select class="select" name="category" id="create-prod-cat-select">
+                      <option value="">Без категории</option>
+                      ${(state.data.categories || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+                    </select>
                   </div>
                   <div class="field">
                     <label>Единица измерения</label>
@@ -1982,33 +2599,51 @@
                   </div>
                 </div>
 
-                <!-- Price & Initial Location -->
-                <div style="border-top:1px solid var(--border); padding-top:14px; display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
-                  <div class="field">
-                    <label>Розничная цена (сомони) *</label>
-                    <input class="input" type="number" step="1" name="price" value="250" required>
+                <!-- Price Section with Switch -->
+                <div style="border-top:1px solid var(--border); padding-top:14px;">
+                  <div class="switch-row" style="margin-bottom:12px;">
+                    <div class="switch-info">
+                      <div class="switch-title">Указывать розничную цену и себестоимость?</div>
+                      <div class="switch-desc">Для сугубо цехового учета количества (штук) цены можно не указывать</div>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="toggle-prod-price" checked onchange="document.getElementById('create-price-wrap').style.display = this.checked ? 'grid' : 'none'">
+                      <span class="switch-slider"></span>
+                    </label>
                   </div>
-                  <div class="field">
-                    <label>Себестоимость (сомони) *</label>
-                    <input class="input" type="number" step="1" name="cost_price" value="90" required>
-                  </div>
-                  <div class="field">
-                    <label>Вес единицы (кг)</label>
-                    <input class="input" type="number" step="0.01" name="weight" value="0.5">
+                  <div id="create-price-wrap" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+                    <div class="field">
+                      <label>Розничная цена (сомони)</label>
+                      <input class="input" type="number" step="1" name="price" value="250">
+                    </div>
+                    <div class="field">
+                      <label>Себестоимость (сомони)</label>
+                      <input class="input" type="number" step="1" name="cost_price" value="90">
+                    </div>
+                    <div class="field">
+                      <label>Вес единицы (кг)</label>
+                      <input class="input" type="number" step="0.01" name="weight" value="0.5">
+                    </div>
                   </div>
                 </div>
 
-                <!-- Date Pickers Section (Дата пр-ва и Срок годности) -->
+                <!-- Date Pickers Section with Switch -->
                 <div style="border-top:1px solid var(--border); padding-top:14px;">
-                  <div style="font-size:11px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                    <i data-lucide="calendar" width="14" style="color:var(--primary)"></i>
-                    <span>Даты и сроки партии (Date Picker):</span>
+                  <div class="switch-row" style="margin-bottom:12px;">
+                    <div class="switch-info">
+                      <div class="switch-title">Указывать дату производства и срок годности? (Date Picker)</div>
+                      <div class="switch-desc">Если даты партии не требуются, отключите переключатель</div>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="toggle-prod-dates" checked onchange="document.getElementById('create-dates-wrap').style.display = this.checked ? 'grid' : 'none'">
+                      <span class="switch-slider"></span>
+                    </label>
                   </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                  <div id="create-dates-wrap" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div class="field">
-                      <label>Дата производства / выпуска *</label>
+                      <label>Дата производства / выпуска</label>
                       <div style="display:flex; gap:6px;">
-                        <input class="input" type="date" name="production_date" id="prod-date-input" value="${today}" required>
+                        <input class="input" type="date" name="production_date" id="prod-date-input" value="${today}">
                         <button type="button" class="btn btn-sm" onclick="document.getElementById('prod-date-input').value='${today}'">Сегодня</button>
                       </div>
                     </div>
@@ -2287,17 +2922,20 @@
         }
       });
 
+      const priceEnabled = document.getElementById('toggle-prod-price') ? document.getElementById('toggle-prod-price').checked : true;
+      const datesEnabled = document.getElementById('toggle-prod-dates') ? document.getElementById('toggle-prod-dates').checked : true;
+
       const payload = {
         name: fd.get('name'),
         sku: fd.get('sku'),
         barcode: fd.get('barcode'),
-        category: fd.get('category'),
+        category: (fd.get('category') || '').trim(),
         unit: fd.get('unit'),
-        price: parseFloat(fd.get('price')) || 0,
-        cost_price: parseFloat(fd.get('cost_price')) || 0,
+        price: priceEnabled ? (parseFloat(fd.get('price')) || 0) : 0,
+        cost_price: priceEnabled ? (parseFloat(fd.get('cost_price')) || 0) : 0,
         weight: parseFloat(fd.get('weight')) || 0,
-        production_date: fd.get('production_date') || '',
-        expiry_date: fd.get('expiry_date') || '',
+        production_date: datesEnabled ? (fd.get('production_date') || '') : '',
+        expiry_date: datesEnabled ? (fd.get('expiry_date') || '') : '',
         is_certified: form.elements['is_certified']?.checked ?? true,
         is_active: form.elements['is_active']?.checked ?? true,
         is_fragile: form.elements['is_fragile']?.checked ?? false,
@@ -2599,38 +3237,70 @@
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                   <div class="field">
-                    <label>Категория</label>
-                    <input class="input" name="category" value="${esc(p.category)}" required>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="margin:0;">Категория</label>
+                      <button type="button" class="btn btn-sm" style="font-size:10px; padding:1px 6px; height:20px;" onclick="quickAddCategoryPrompt('edit-prod-cat-select')">+ Категория</button>
+                    </div>
+                    <select class="select" name="category" id="edit-prod-cat-select">
+                      <option value="" ${!p.category?'selected':''}>Без категории</option>
+                      ${(state.data.categories || []).map(c => `<option value="${esc(c)}" ${p.category===c?'selected':''}>${esc(c)}</option>`).join('')}
+                    </select>
                   </div>
                   <div class="field">
                     <label>Единица измерения</label>
                     <input class="input" name="unit" value="${esc(p.unit)}" required>
                   </div>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
-                  <div class="field">
-                    <label>Цена (сомони)</label>
-                    <input class="input" type="number" name="price" value="${p.price}" required>
+
+                <!-- Price Section in Edit -->
+                <div style="border-top:1px solid var(--border); padding-top:10px;">
+                  <div class="switch-row" style="margin-bottom:10px;">
+                    <div class="switch-info">
+                      <div class="switch-title">Указывать розничную цену и себестоимость?</div>
+                      <div class="switch-desc">Если цены не требуются, отключите переключатель</div>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="toggle-edit-price" ${p.price > 0 ? 'checked' : ''} onchange="document.getElementById('edit-price-wrap').style.display = this.checked ? 'grid' : 'none'">
+                      <span class="switch-slider"></span>
+                    </label>
                   </div>
-                  <div class="field">
-                    <label>Себестоимость (сомони)</label>
-                    <input class="input" type="number" name="cost_price" value="${p.cost_price}" required>
-                  </div>
-                  <div class="field">
-                    <label>Вес (кг)</label>
-                    <input class="input" type="number" step="0.01" name="weight" value="${p.weight}">
+                  <div id="edit-price-wrap" style="display:${p.price > 0 ? 'grid' : 'none'}; grid-template-columns:repeat(3, 1fr); gap:12px;">
+                    <div class="field">
+                      <label>Розничная цена (сомони)</label>
+                      <input class="input" type="number" step="1" name="price" value="${p.price}">
+                    </div>
+                    <div class="field">
+                      <label>Себестоимость (сомони)</label>
+                      <input class="input" type="number" step="1" name="cost_price" value="${p.cost_price}">
+                    </div>
+                    <div class="field">
+                      <label>Вес (кг)</label>
+                      <input class="input" type="number" step="0.01" name="weight" value="${p.weight}">
+                    </div>
                   </div>
                 </div>
 
                 <!-- Date Pickers in Edit -->
-                <div style="border-top:1px solid var(--border); padding-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                  <div class="field">
-                    <label>Дата производства (Date Picker)</label>
-                    <input class="input" type="date" name="production_date" value="${p.production_date || ''}">
+                <div style="border-top:1px solid var(--border); padding-top:10px;">
+                  <div class="switch-row" style="margin-bottom:10px;">
+                    <div class="switch-info">
+                      <div class="switch-title">Указывать дату производства и срок годности?</div>
+                      <div class="switch-desc">Календарные даты партии (Date Picker)</div>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="toggle-edit-dates" ${p.production_date ? 'checked' : ''} onchange="document.getElementById('edit-dates-wrap').style.display = this.checked ? 'grid' : 'none'">
+                      <span class="switch-slider"></span>
+                    </label>
                   </div>
-                  <div class="field">
-                    <label>Срок годности / Гарантия</label>
-                    <input class="input" type="date" name="expiry_date" value="${p.expiry_date || ''}">
+                  <div id="edit-dates-wrap" style="display:${p.production_date ? 'grid' : 'none'}; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="field">
+                      <label>Дата производства (Date Picker)</label>
+                      <input class="input" type="date" name="production_date" value="${p.production_date || ''}">
+                    </div>
+                    <div class="field">
+                      <label>Срок годности / Гарантия</label>
+                      <input class="input" type="date" name="expiry_date" value="${p.expiry_date || ''}">
+                    </div>
                   </div>
                 </div>
 
@@ -2783,15 +3453,18 @@
         }
       });
 
+      const priceEnabled = document.getElementById('toggle-edit-price') ? document.getElementById('toggle-edit-price').checked : true;
+      const datesEnabled = document.getElementById('toggle-edit-dates') ? document.getElementById('toggle-edit-dates').checked : true;
+
       const payload = {
         name: fd.get('name'),
-        category: fd.get('category'),
+        category: (fd.get('category') || '').trim(),
         unit: fd.get('unit'),
-        price: parseFloat(fd.get('price')) || 0,
-        cost_price: parseFloat(fd.get('cost_price')) || 0,
+        price: priceEnabled ? (parseFloat(fd.get('price')) || 0) : 0,
+        cost_price: priceEnabled ? (parseFloat(fd.get('cost_price')) || 0) : 0,
         weight: parseFloat(fd.get('weight')) || 0,
-        production_date: fd.get('production_date') || '',
-        expiry_date: fd.get('expiry_date') || '',
+        production_date: datesEnabled ? (fd.get('production_date') || '') : '',
+        expiry_date: datesEnabled ? (fd.get('expiry_date') || '') : '',
         is_certified: form.elements['is_certified']?.checked ?? true,
         is_active: form.elements['is_active']?.checked ?? true,
         is_fragile: form.elements['is_fragile']?.checked ?? false,
@@ -3418,6 +4091,7 @@
 
     // Start App
     (async function init() {
+      initTheme();
       await loadData();
       switchView('dashboard');
     })();
