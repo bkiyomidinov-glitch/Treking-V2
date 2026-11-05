@@ -1940,11 +1940,7 @@
                     </td>
                     ${state.displaySettings.showCategories ? `<td><span class="badge badge-slate">${esc(p.category || 'Без категории')}</span></td>` : ''}
                     <td>
-                      <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
-                        ${p.is_certified ? '<span class="badge badge-emerald" style="font-size:9px; padding:1px 5px;">✓ Сертификат</span>' : ''}
-                        ${p.is_temperature_controlled ? '<span class="badge badge-blue" style="font-size:9px; padding:1px 5px;">❄ Терморежим</span>' : ''}
-                        ${p.is_fragile ? '<span class="badge badge-amber" style="font-size:9px; padding:1px 5px;">⚠ Хрупкое</span>' : ''}
-                      </div>
+                      ${getProductFlagBadges(p)}
                       ${state.displaySettings.showDates && p.production_date ? `<div style="font-size:10px; color:var(--text-dim);">Пр-во: <strong>${dateOnly(p.production_date)}</strong></div>` : ''}
                     </td>
                     ${state.displaySettings.showPrices ? `<td class="mono" style="font-weight:600;">${money(p.price)}</td>` : ''}
@@ -2041,11 +2037,7 @@
                     </td>
                     ${state.displaySettings.showCategories ? `<td><span class="badge badge-slate">${esc(p.category || 'Без категории')}</span></td>` : ''}
                     <td>
-                      <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
-                        ${p.is_certified ? '<span class="badge badge-emerald" style="font-size:9px; padding:1px 5px;">✓ Сертификат</span>' : ''}
-                        ${p.is_temperature_controlled ? '<span class="badge badge-blue" style="font-size:9px; padding:1px 5px;">❄ Термо</span>' : ''}
-                        ${p.is_fragile ? '<span class="badge badge-amber" style="font-size:9px; padding:1px 5px;">⚠ Хрупкое</span>' : ''}
-                      </div>
+                      ${getProductFlagBadges(p)}
                       ${state.displaySettings.showDates && p.production_date ? `<div style="font-size:10px; color:var(--text-dim);">Пр-во: <strong style="color:#e2e8f0;">${dateOnly(p.production_date)}</strong></div>` : ''}
                       ${state.displaySettings.showDates && p.expiry_date ? `<div style="font-size:10px; color:var(--text-dim);">Срок: <strong>${dateOnly(p.expiry_date)}</strong></div>` : ''}
                     </td>
@@ -2841,6 +2833,8 @@
       const locations = state.data.locations;
       const staff = state.data.staff;
       const attributes = state.data.custom_attributes;
+      const booleanAttrs = (state.data.custom_attributes || []).filter(a => a.type === 'boolean');
+      const nonBooleanAttrs = (state.data.custom_attributes || []).filter(a => a.type !== 'boolean');
 
       const autoBarcode = '485' + Math.floor(Math.random() * 900000000 + 100000000);
       const autoSku = 'TJ-' + Math.floor(Math.random() * 9000 + 1000);
@@ -2890,14 +2884,26 @@
                     </select>
                   </div>
                   <div class="field">
-                    <label>Единица измерения</label>
-                    <select class="select" name="unit">
-                      <option value="шт">Штука (шт)</option>
-                      <option value="компл">Комплект (компл)</option>
-                      <option value="пар">Пара (пар)</option>
-                      <option value="упак">Упаковка (упак)</option>
-                      <option value="м">Метр (м)</option>
-                    </select>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="margin:0;">Единица измерения</label>
+                      <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn btn-sm" style="font-size:10px; padding:1px 6px; height:20px;" title="Создать новую единицу в справочнике" onclick="quickAddUnitPrompt('create-prod-unit-input')">+ Единица</button>
+                        <button type="button" class="btn btn-sm" style="font-size:10px; padding:1px 6px; height:20px;" title="Управление единицами измерения" onclick="openUnitsManagerModal()">⚙ Справочник</button>
+                      </div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <input class="input" name="unit" id="create-prod-unit-input" list="units-datalist" value="шт" placeholder="напр. шт, км, рулон, кг, пог. м, бобина..." autocomplete="off">
+                      <datalist id="units-datalist">
+                        ${(state.data.units || []).map(u => {
+                          const uName = typeof u === 'string' ? u : u.name;
+                          const uDesc = typeof u === 'string' ? '' : (u.description || '');
+                          return `<option value="${esc(uName)}">${esc(uDesc ? `${uName} (${uDesc})` : uName)}</option>`;
+                        }).join('')}
+                      </datalist>
+                    </div>
+                    <div style="font-size:10px; color:var(--text-dim); margin-top:2px;">
+                      Выберите из списка или введите любую свою (км, рулон, шт, кг)
+                    </div>
                   </div>
                 </div>
 
@@ -2959,56 +2965,36 @@
                   </div>
                 </div>
 
-                <!-- Switch Toggles Section -->
+                <!-- Dynamic Switch Toggles Section -->
                 <div style="border-top:1px solid var(--border); padding-top:14px;">
-                  <div style="font-size:11px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                    <i data-lucide="sliders" width="14" style="color:var(--accent)"></i>
-                    <span>Параметры и флаги изделия (Switch-переключатели):</span>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:11px; font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
+                      <i data-lucide="sliders" width="14" style="color:var(--accent)"></i>
+                      <span>Параметры и флаги изделия (Switch-переключатели):</span>
+                    </div>
+                    <button type="button" class="btn btn-sm" style="font-size:10px; padding:2px 8px; color:var(--accent); border-color:rgba(16,185,129,0.3);" onclick="promptAddNewSwitchFlag()">+ Добавить флаг (Switch)</button>
                   </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div class="switch-row">
-                      <div class="switch-info">
-                        <div class="switch-title">Сертификат качества</div>
-                        <div class="switch-desc">ГОСТ / ТУ соответствие</div>
+                  <div id="modal-switches-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    ${booleanAttrs.length === 0 ? `
+                      <div style="grid-column:1/-1; padding:16px; text-align:center; color:var(--text-dim); font-size:11px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:8px;">
+                        Все переключатели удалены. Нажмите «+ Добавить флаг (Switch)», чтобы создать свой уникальный переключатель.
                       </div>
-                      <label class="switch">
-                        <input type="checkbox" name="is_certified" checked>
-                        <span class="switch-slider"></span>
-                      </label>
-                    </div>
-
-                    <div class="switch-row">
-                      <div class="switch-info">
-                        <div class="switch-title">Активен для продажи</div>
-                        <div class="switch-desc">Доступен к отгрузке со склада</div>
+                    ` : booleanAttrs.map(attr => `
+                      <div class="switch-row" id="switch-card-${attr.id}">
+                        <div class="switch-info" style="flex:1;">
+                          <div style="display:flex; align-items:center; gap:6px;">
+                            <div class="switch-title">${esc(attr.name)}</div>
+                            <button type="button" class="btn btn-sm btn-icon" style="width:20px; height:20px; padding:0; border:none; background:transparent; color:var(--text-dim);" title="Переименовать переключатель" onclick="promptRenameSwitch(${attr.id}, '${esc(attr.name)}')"><i data-lucide="edit-2" width="11"></i></button>
+                            <button type="button" class="btn btn-sm btn-icon" style="width:20px; height:20px; padding:0; border:none; background:transparent; color:var(--red);" title="Удалить переключатель из системы" onclick="promptDeleteSwitch(${attr.id}, '${esc(attr.name)}')"><i data-lucide="trash-2" width="11"></i></button>
+                          </div>
+                          <div class="switch-desc mono" style="font-size:10px; color:var(--text-dim);">ключ: ${esc(attr.key)}</div>
+                        </div>
+                        <label class="switch">
+                          <input type="checkbox" data-switch-key="${esc(attr.key)}" ${attr.key==='is_certified'||attr.key==='is_active'?'checked':''}>
+                          <span class="switch-slider"></span>
+                        </label>
                       </div>
-                      <label class="switch">
-                        <input type="checkbox" name="is_active" checked>
-                        <span class="switch-slider"></span>
-                      </label>
-                    </div>
-
-                    <div class="switch-row">
-                      <div class="switch-info">
-                        <div class="switch-title">Хрупкий груз</div>
-                        <div class="switch-desc">Особые требования к перевозке</div>
-                      </div>
-                      <label class="switch">
-                        <input type="checkbox" name="is_fragile">
-                        <span class="switch-slider"></span>
-                      </label>
-                    </div>
-
-                    <div class="switch-row">
-                      <div class="switch-info">
-                        <div class="switch-title">Температурный режим</div>
-                        <div class="switch-desc">Изотерм / Холодная цепь</div>
-                      </div>
-                      <label class="switch">
-                        <input type="checkbox" name="is_temperature_controlled">
-                        <span class="switch-slider"></span>
-                      </label>
-                    </div>
+                    `).join('')}
                   </div>
                 </div>
 
@@ -3036,7 +3022,7 @@
                     <button type="button" class="btn btn-sm" onclick="addCustomAttrField()">+ Добавить поле</button>
                   </div>
                   <div id="modal-attrs-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    ${attributes.map(attr => {
+                    ${nonBooleanAttrs.map(attr => {
                       if (attr.type === 'boolean') {
                         return `
                           <div class="switch-row">
@@ -3227,21 +3213,28 @@
       const priceEnabled = document.getElementById('toggle-prod-price') ? document.getElementById('toggle-prod-price').checked : true;
       const datesEnabled = document.getElementById('toggle-prod-dates') ? document.getElementById('toggle-prod-dates').checked : true;
 
+      // Collect all dynamic switch toggles
+      form.querySelectorAll('[data-switch-key]').forEach(el => {
+        attrs[el.dataset.switchKey] = el.checked;
+      });
+
+      const unitVal = (fd.get('unit') || '').trim() || 'шт';
+
       const payload = {
         name: fd.get('name'),
         sku: fd.get('sku'),
         barcode: fd.get('barcode'),
         category: (fd.get('category') || '').trim(),
-        unit: fd.get('unit'),
+        unit: unitVal,
         price: priceEnabled ? (parseFloat(fd.get('price')) || 0) : 0,
         cost_price: priceEnabled ? (parseFloat(fd.get('cost_price')) || 0) : 0,
         weight: parseFloat(fd.get('weight')) || 0,
         production_date: datesEnabled ? (fd.get('production_date') || '') : '',
         expiry_date: datesEnabled ? (fd.get('expiry_date') || '') : '',
-        is_certified: form.elements['is_certified']?.checked ?? true,
-        is_active: form.elements['is_active']?.checked ?? true,
-        is_fragile: form.elements['is_fragile']?.checked ?? false,
-        is_temperature_controlled: form.elements['is_temperature_controlled']?.checked ?? false,
+        is_certified: attrs['is_certified'] !== undefined ? attrs['is_certified'] : true,
+        is_active: attrs['is_active'] !== undefined ? attrs['is_active'] : true,
+        is_fragile: attrs['is_fragile'] !== undefined ? attrs['is_fragile'] : false,
+        is_temperature_controlled: attrs['is_temperature_controlled'] !== undefined ? attrs['is_temperature_controlled'] : false,
         initial_location_id: parseInt(fd.get('initial_location_id'), 10),
         initial_quantity: parseInt(fd.get('initial_quantity'), 10) || 1,
         description: fd.get('description') || '',
@@ -3520,6 +3513,8 @@
     function openEditProductModal(productId) {
       const p = state.data.products.find(item => item.id === productId);
       if (!p) return;
+      const booleanAttrs = (state.data.custom_attributes || []).filter(a => a.type === 'boolean');
+      const nonBooleanAttrs = (state.data.custom_attributes || []).filter(a => a.type !== 'boolean');
 
       document.getElementById('modal-container').innerHTML = `
         <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
@@ -3549,8 +3544,16 @@
                     </select>
                   </div>
                   <div class="field">
-                    <label>Единица измерения</label>
-                    <input class="input" name="unit" value="${esc(p.unit)}" required>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="margin:0;">Единица измерения</label>
+                      <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn btn-sm" style="font-size:10px; padding:1px 6px; height:20px;" onclick="quickAddUnitPrompt('edit-prod-unit-input')">+ Единица</button>
+                        <button type="button" class="btn btn-sm" style="font-size:10px; padding:1px 6px; height:20px;" onclick="openUnitsManagerModal()">⚙ Справочник</button>
+                      </div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <input class="input" name="unit" id="edit-prod-unit-input" list="units-datalist" value="${esc(p.unit || '')}" placeholder="напр. шт, км, рулон, кг, пог. м..." autocomplete="off">
+                    </div>
                   </div>
                 </div>
 
@@ -3606,50 +3609,40 @@
                   </div>
                 </div>
 
-                <!-- Switch Toggles in Edit -->
-                <div style="border-top:1px solid var(--border); padding-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                  <div class="switch-row">
-                    <div class="switch-info">
-                      <div class="switch-title">Сертификат качества</div>
-                      <div class="switch-desc">ГОСТ / ТУ</div>
+                <!-- Dynamic Switch Toggles in Edit -->
+                <div style="border-top:1px solid var(--border); padding-top:10px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:11px; font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
+                      <i data-lucide="sliders" width="14" style="color:var(--accent)"></i>
+                      <span>Параметры и флаги изделия (Switch-переключатели):</span>
                     </div>
-                    <label class="switch">
-                      <input type="checkbox" name="is_certified" ${p.is_certified ? 'checked' : ''}>
-                      <span class="switch-slider"></span>
-                    </label>
+                    <button type="button" class="btn btn-sm" style="font-size:10px; padding:2px 8px; color:var(--accent); border-color:rgba(16,185,129,0.3);" onclick="promptAddNewSwitchFlag()">+ Добавить флаг (Switch)</button>
                   </div>
-
-                  <div class="switch-row">
-                    <div class="switch-info">
-                      <div class="switch-title">Активен для продажи</div>
-                      <div class="switch-desc">В наличии</div>
-                    </div>
-                    <label class="switch">
-                      <input type="checkbox" name="is_active" ${p.is_active ? 'checked' : ''}>
-                      <span class="switch-slider"></span>
-                    </label>
-                  </div>
-
-                  <div class="switch-row">
-                    <div class="switch-info">
-                      <div class="switch-title">Хрупкий груз</div>
-                      <div class="switch-desc">Особая упаковка</div>
-                    </div>
-                    <label class="switch">
-                      <input type="checkbox" name="is_fragile" ${p.is_fragile ? 'checked' : ''}>
-                      <span class="switch-slider"></span>
-                    </label>
-                  </div>
-
-                  <div class="switch-row">
-                    <div class="switch-info">
-                      <div class="switch-title">Температурный режим</div>
-                      <div class="switch-desc">Холодная цепь</div>
-                    </div>
-                    <label class="switch">
-                      <input type="checkbox" name="is_temperature_controlled" ${p.is_temperature_controlled ? 'checked' : ''}>
-                      <span class="switch-slider"></span>
-                    </label>
+                  <div id="modal-edit-switches-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    ${booleanAttrs.length === 0 ? `
+                      <div style="grid-column:1/-1; padding:16px; text-align:center; color:var(--text-dim); font-size:11px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:8px;">
+                        Все переключатели удалены. Нажмите «+ Добавить флаг (Switch)», чтобы создать свой уникальный переключатель.
+                      </div>
+                    ` : booleanAttrs.map(attr => {
+                      const valInAttrs = p.attributes && p.attributes[attr.key] !== undefined ? p.attributes[attr.key] : p[attr.key];
+                      const isChecked = valInAttrs === true || valInAttrs === 'true' || valInAttrs === 1;
+                      return `
+                        <div class="switch-row" id="edit-switch-card-${attr.id}">
+                          <div class="switch-info" style="flex:1;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                              <div class="switch-title">${esc(attr.name)}</div>
+                              <button type="button" class="btn btn-sm btn-icon" style="width:20px; height:20px; padding:0; border:none; background:transparent; color:var(--text-dim);" title="Переименовать переключатель" onclick="promptRenameSwitch(${attr.id}, '${esc(attr.name)}')"><i data-lucide="edit-2" width="11"></i></button>
+                              <button type="button" class="btn btn-sm btn-icon" style="width:20px; height:20px; padding:0; border:none; background:transparent; color:var(--red);" title="Удалить переключатель из системы" onclick="promptDeleteSwitch(${attr.id}, '${esc(attr.name)}')"><i data-lucide="trash-2" width="11"></i></button>
+                            </div>
+                            <div class="switch-desc mono" style="font-size:10px; color:var(--text-dim);">ключ: ${esc(attr.key)}</div>
+                          </div>
+                          <label class="switch">
+                            <input type="checkbox" data-switch-key="${esc(attr.key)}" ${isChecked ? 'checked' : ''}>
+                            <span class="switch-slider"></span>
+                          </label>
+                        </div>
+                      `;
+                    }).join('')}
                   </div>
                 </div>
 
@@ -3660,7 +3653,7 @@
                     <button type="button" class="btn btn-sm" onclick="addCustomAttrField()">+ Добавить поле</button>
                   </div>
                   <div id="modal-attrs-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    ${state.data.custom_attributes.map(attr => {
+                    ${nonBooleanAttrs.map(attr => {
                       const curVal = (p.attributes && p.attributes[attr.key] !== undefined) ? p.attributes[attr.key] : '';
                       if (attr.type === 'boolean') {
                         const checked = curVal === true || curVal === 'true' || curVal === 1;
@@ -3758,19 +3751,26 @@
       const priceEnabled = document.getElementById('toggle-edit-price') ? document.getElementById('toggle-edit-price').checked : true;
       const datesEnabled = document.getElementById('toggle-edit-dates') ? document.getElementById('toggle-edit-dates').checked : true;
 
+      // Collect all dynamic switch toggles in edit form
+      form.querySelectorAll('[data-switch-key]').forEach(el => {
+        attrs[el.dataset.switchKey] = el.checked;
+      });
+
+      const unitVal = (fd.get('unit') || '').trim() || 'шт';
+
       const payload = {
         name: fd.get('name'),
         category: (fd.get('category') || '').trim(),
-        unit: fd.get('unit'),
+        unit: unitVal,
         price: priceEnabled ? (parseFloat(fd.get('price')) || 0) : 0,
         cost_price: priceEnabled ? (parseFloat(fd.get('cost_price')) || 0) : 0,
         weight: parseFloat(fd.get('weight')) || 0,
         production_date: datesEnabled ? (fd.get('production_date') || '') : '',
         expiry_date: datesEnabled ? (fd.get('expiry_date') || '') : '',
-        is_certified: form.elements['is_certified']?.checked ?? true,
-        is_active: form.elements['is_active']?.checked ?? true,
-        is_fragile: form.elements['is_fragile']?.checked ?? false,
-        is_temperature_controlled: form.elements['is_temperature_controlled']?.checked ?? false,
+        is_certified: attrs['is_certified'] !== undefined ? attrs['is_certified'] : true,
+        is_active: attrs['is_active'] !== undefined ? attrs['is_active'] : true,
+        is_fragile: attrs['is_fragile'] !== undefined ? attrs['is_fragile'] : false,
+        is_temperature_controlled: attrs['is_temperature_controlled'] !== undefined ? attrs['is_temperature_controlled'] : false,
         qc_status: fd.get('qc_status'),
         batch_id: fd.get('batch_id'),
         description: fd.get('description'),
