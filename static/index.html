@@ -6,730 +6,7 @@
   <meta name="theme-color" content="#0b0f14">
   <link rel="icon" href="data:,">
   <title>Учет производства и трекинг товаров · Таджикистан</title>
-  <script src="https://cdn.tailwindcss.com">
-    // =========================================================================
-    // --- Enterprise Security, AuthN, RBAC & WORM Audit Trail Module ---
-    // =========================================================================
-
-    const ROLE_LABELS = {
-      admin: { label: 'Администратор', color: 'badge-role-admin' },
-      manager: { label: 'Менеджер', color: 'badge-role-manager' },
-      storekeeper: { label: 'Завскладом', color: 'badge-role-storekeeper' },
-      qc: { label: 'Инспектор ОТК', color: 'badge-role-qc' },
-      worker: { label: 'Мастер цеха', color: 'badge-role-worker' },
-    };
-
-    async function initAuth() {
-      const token = localStorage.getItem('promtrek_token');
-      if (!token) {
-        openLoginModal();
-        return false;
-      }
-      try {
-        const user = await api('/auth/me');
-        state.currentUser = user;
-        updateTopbarUser();
-        applyRolePermissions();
-        return true;
-      } catch (err) {
-        localStorage.removeItem('promtrek_token');
-        localStorage.removeItem('promtrek_user');
-        state.currentUser = null;
-        openLoginModal();
-        return false;
-      }
-    }
-
-    function updateTopbarUser() {
-      const u = state.currentUser;
-      if (!u) return;
-
-      const avatarEl = document.getElementById('topbar-avatar');
-      const nameEl = document.getElementById('topbar-fullname');
-      const roleEl = document.getElementById('topbar-role-badge');
-      const wsEl = document.getElementById('topbar-workshop');
-
-      if (avatarEl) {
-        const parts = (u.full_name || u.username).trim().split(' ');
-        const initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (u.username.substring(0, 2)).toUpperCase();
-        avatarEl.textContent = initials;
-      }
-      if (nameEl) nameEl.textContent = u.full_name || u.username;
-      if (roleEl) {
-        const meta = ROLE_LABELS[u.role] || { label: u.role, color: 'badge-slate' };
-        roleEl.className = `badge ${meta.color}`;
-        roleEl.textContent = meta.label;
-      }
-      if (wsEl) {
-        wsEl.textContent = u.workshop_name ? `${u.workshop_name} · ${u.workshop_city || 'Таджикистан'}` : 'Центральный офис';
-      }
-    }
-
-    function applyRolePermissions() {
-      const u = state.currentUser;
-      if (!u) return;
-      const role = u.role;
-
-      // Кнопка создания товара (admin, manager)
-      const btnCreate = document.getElementById('btn-open-create-product');
-      if (btnCreate) btnCreate.style.display = ['admin', 'manager'].includes(role) ? 'flex' : 'none';
-
-      // Кнопка перемещения (admin, manager, storekeeper)
-      const btnMove = document.getElementById('btn-open-move-modal');
-      if (btnMove) btnMove.style.display = ['admin', 'manager', 'storekeeper'].includes(role) ? 'flex' : 'none';
-
-      // Кнопка сброса системы (admin)
-      const btnReset = document.getElementById('btn-system-reset');
-      if (btnReset) btnReset.style.display = role === 'admin' ? 'flex' : 'none';
-
-      // Меню безопасности
-      const navSecGroup = document.getElementById('nav-group-security');
-      const navUsers = document.getElementById('nav-item-users');
-      const navAudit = document.getElementById('nav-item-audit');
-
-      if (navSecGroup) navSecGroup.style.display = ['admin', 'manager'].includes(role) ? 'block' : 'none';
-      if (navUsers) navUsers.style.display = role === 'admin' ? 'flex' : 'none';
-      if (navAudit) navAudit.style.display = ['admin', 'manager'].includes(role) ? 'flex' : 'none';
-    }
-
-    function openLoginModal() {
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-backdrop" style="backdrop-filter:blur(8px); background:rgba(3,7,18,0.85);">
-          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(460px, 95vw); border:1px solid rgba(56,189,248,0.25); box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);">
-            <div class="modal-head" style="border-bottom:1px solid var(--border); padding-bottom:16px;">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#38bdf8,#6366f1); display:grid; place-items:center; color:#fff; font-weight:800; font-size:16px;">
-                  ПТ
-                </div>
-                <div>
-                  <div style="font-weight:700; font-size:16px; color:#fff;">Вход в Treking-V2</div>
-                  <div style="font-size:11px; color:var(--text-dim);">Корпоративная безопасность и ролевой учет (RBAC)</div>
-                </div>
-              </div>
-            </div>
-            <form onsubmit="handleLoginSubmit(event)">
-              <div class="modal-body" style="display:grid; gap:14px; padding:20px 0;">
-                <div class="field">
-                  <label>Логин / Имя пользователя *</label>
-                  <input type="text" id="login-username" class="input" placeholder="например, admin или manager" required autocomplete="username">
-                </div>
-                <div class="field">
-                  <label>Пароль *</label>
-                  <input type="password" id="login-password" class="input" placeholder="••••••••" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn btn-primary" id="btn-login-submit" style="width:100%; justify-content:center; padding:10px; font-weight:600; margin-top:4px;">
-                  <i data-lucide="log-in" width="16"></i>
-                  <span>Войти в систему</span>
-                </button>
-
-                <div style="border-top:1px dashed var(--border); margin:10px 0 4px 0; padding-top:12px;">
-                  <div style="font-size:11px; font-weight:600; color:var(--text-dim); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
-                    Быстрый вход для проверки ролей:
-                  </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('admin', 'admin123')" style="justify-content:flex-start; font-size:11px;">
-                      👑 <b>Администратор</b>
-                    </button>
-                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('manager', 'manager123')" style="justify-content:flex-start; font-size:11px;">
-                      📋 <b>Менеджер</b>
-                    </button>
-                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('storekeeper', 'store123')" style="justify-content:flex-start; font-size:11px;">
-                      📦 <b>Завскладом</b>
-                    </button>
-                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('qc', 'qc123')" style="justify-content:flex-start; font-size:11px;">
-                      🔍 <b>ОТК Контроль</b>
-                    </button>
-                  </div>
-                  <div style="margin-top:6px;">
-                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('worker', 'worker123')" style="width:100%; justify-content:center; font-size:11px;">
-                      🛠️ <b>Мастер цеха (только просмотр/сканирование)</b>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
-
-    async function quickLoginAs(username, password) {
-      document.getElementById('login-username').value = username;
-      document.getElementById('login-password').value = password;
-      await performLogin(username, password);
-    }
-
-    async function handleLoginSubmit(e) {
-      e.preventDefault();
-      const u = document.getElementById('login-username').value.trim();
-      const p = document.getElementById('login-password').value;
-      await performLogin(u, p);
-    }
-
-    async function performLogin(username, password) {
-      const btn = document.getElementById('btn-login-submit');
-      if (btn) btn.disabled = true;
-      try {
-        const res = await api('/auth/token', {
-          method: 'POST',
-          body: JSON.stringify({ username, password })
-        });
-        localStorage.setItem('promtrek_token', res.access_token);
-        localStorage.setItem('promtrek_user', JSON.stringify(res.user));
-        state.currentUser = res.user;
-
-        closeModal();
-        toast(`Добро пожаловать, ${res.user.full_name || res.user.username}!`, 'success');
-
-        await loadData();
-        updateTopbarUser();
-        applyRolePermissions();
-        await switchView('dashboard');
-      } catch (err) {
-        toast(err.message || 'Ошибка входа в систему', 'error');
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    function logoutUser() {
-      localStorage.removeItem('promtrek_token');
-      localStorage.removeItem('promtrek_user');
-      state.currentUser = null;
-      closeModal();
-      toast('Вы вышли из системы', 'info');
-      openLoginModal();
-    }
-
-    function openUserSessionMenu() {
-      const u = state.currentUser;
-      if (!u) {
-        openLoginModal();
-        return;
-      }
-      const roleMeta = ROLE_LABELS[u.role] || { label: u.role, color: 'badge-slate' };
-
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(440px, 95vw);">
-            <div class="modal-head">
-              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
-                <i data-lucide="user-check" width="18" style="color:var(--primary)"></i>
-                <span>Текущая учетная запись</span>
-              </div>
-              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
-            </div>
-            <div class="modal-body" style="display:grid; gap:16px;">
-              <div style="display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px;">
-                <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#6366f1); display:grid; place-items:center; font-weight:800; font-size:14px; color:#fff;">
-                  ${((u.full_name || u.username)[0]).toUpperCase()}
-                </div>
-                <div>
-                  <div style="font-weight:700; font-size:14px; color:#fff;">${esc(u.full_name || u.username)}</div>
-                  <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-                    <span class="badge ${roleMeta.color}" style="font-size:10px;">${roleMeta.label}</span>
-                    <span class="mono" style="font-size:11px; color:var(--text-dim);">@${esc(u.username)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; font-weight:600; margin-bottom:6px;">Быстрое переключение учетной записи:</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                  <button class="btn btn-sm" onclick="quickLoginAs('admin','admin123')">👑 Администратор</button>
-                  <button class="btn btn-sm" onclick="quickLoginAs('manager','manager123')">📋 Менеджер</button>
-                  <button class="btn btn-sm" onclick="quickLoginAs('storekeeper','store123')">📦 Завскладом</button>
-                  <button class="btn btn-sm" onclick="quickLoginAs('qc','qc123')">🔍 Инспектор ОТК</button>
-                </div>
-                <div style="margin-top:6px;">
-                  <button class="btn btn-sm" onclick="quickLoginAs('worker','worker123')" style="width:100%; justify-content:center;">🛠️ Мастер цеха</button>
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer" style="display:flex; justify-content:space-between;">
-              <button class="btn btn-sm" onclick="closeModal()">Закрыть</button>
-              <button class="btn btn-sm btn-accent" style="color:var(--red);" onclick="logoutUser()">
-                <i data-lucide="log-out" width="14"></i>
-                <span>Выйти из аккаунта</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
-
-    // --- QC Inspection Modal ---
-    function openQCModal(productId) {
-      const p = state.data.products.find(item => item.id === productId);
-      if (!p) return;
-
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(480px, 95vw);">
-            <div class="modal-head">
-              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
-                <i data-lucide="clipboard-check" width="18" style="color:var(--purple)"></i>
-                <span>Инспекция ОТК · Контроль качества</span>
-              </div>
-              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
-            </div>
-            <form onsubmit="handleQCSave(event, ${p.id})">
-              <div class="modal-body" style="display:grid; gap:14px;">
-                <div style="padding:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px;">
-                  <div style="font-weight:600; color:#fff;">${esc(p.name)}</div>
-                  <div class="mono" style="font-size:11px; color:var(--text-dim); margin-top:2px;">Артикул: ${p.sku} | Партия: ${p.batch_id || '—'}</div>
-                </div>
-                <div class="field">
-                  <label>Решение инспектора качества (ОТК) *</label>
-                  <select id="qc-new-status" class="select" required>
-                    <option value="Пройден" ${p.qc_status==='Пройден'?'selected':''}>✅ Пройден (Соответствует ГОСТ/ТУ)</option>
-                    <option value="Брак (на доработку)" ${p.qc_status==='Брак (на доработку)'?'selected':''}>⚠️ Брак (направить на доработку)</option>
-                    <option value="Отклонен" ${p.qc_status==='Отклонен'?'selected':''}>❌ Отклонен (брак без возможности исправления)</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Заключение / Замечания инспектора</label>
-                  <textarea id="qc-note" class="textarea" rows="3" placeholder="Укажите результаты визуального контроля, плотности ткани или замеров..."></textarea>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn" onclick="closeModal()">Отмена</button>
-                <button type="submit" class="btn btn-primary" style="background:#8b5cf6; border-color:#8b5cf6;">Сохранить заключение ОТК</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
-
-    async function handleQCSave(e, productId) {
-      e.preventDefault();
-      const status = document.getElementById('qc-new-status').value;
-      const note = document.getElementById('qc-note').value.trim();
-      try {
-        await api(`/products/${productId}/qc`, {
-          method: 'PUT',
-          body: JSON.stringify({ qc_status: status, note })
-        });
-        toast(`Статус качества обновлен: «${status}»`, 'success');
-        closeModal();
-        await loadData();
-        await switchView(state.currentView);
-      } catch (err) {
-        toast(err.message, 'error');
-      }
-    }
-
-    // --- Users Management View (Admin Only) ---
-    async function renderUsers() {
-      let users = [];
-      try {
-        users = await api('/users');
-      } catch (err) {
-        return `<div class="card" style="padding:40px; text-align:center; color:var(--red);">${esc(err.message)}</div>`;
-      }
-
-      return `
-        <div style="display:grid; gap:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div>
-              <h1 class="page-title" style="margin:0 0 4px 0;">Управление пользователями и правами (RBAC)</h1>
-              <div style="color:var(--text-muted); font-size:12px;">
-                Централизованный контроль доступа, учетные записи цехов и закрепление складов
-              </div>
-            </div>
-            <button class="btn btn-primary" onclick="openCreateUserModal()">
-              <i data-lucide="user-plus" width="14"></i>
-              <span>Новый пользователь</span>
-            </button>
-          </div>
-
-          <div class="card" style="padding:0; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse;">
-              <thead>
-                <tr>
-                  <th style="width:50px;">ID</th>
-                  <th>Пользователь</th>
-                  <th>ФИО сотрудника</th>
-                  <th>Роль (RBAC)</th>
-                  <th>Цех / Склад</th>
-                  <th>Статус</th>
-                  <th>Создан</th>
-                  <th style="text-align:right;">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${users.map(u => {
-                  const roleMeta = ROLE_LABELS[u.role] || { label: u.role, color: 'badge-slate' };
-                  return `
-                    <tr>
-                      <td class="mono" style="color:var(--text-dim);">${u.id}</td>
-                      <td>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                          <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#6366f1); display:grid; place-items:center; font-weight:700; font-size:11px; color:#fff;">
-                            ${((u.full_name || u.username)[0]).toUpperCase()}
-                          </div>
-                          <span class="mono" style="font-weight:600; color:#fff;">${esc(u.username)}</span>
-                        </div>
-                      </td>
-                      <td style="font-weight:500;">${esc(u.full_name)}</td>
-                      <td><span class="badge ${roleMeta.color}">${roleMeta.label}</span></td>
-                      <td>${u.workshop_name ? `<span class="workshop-pill">${esc(u.workshop_name)}</span>` : '<span style="color:var(--text-dim)">— Все цеха —</span>'}</td>
-                      <td>
-                        <span class="badge ${u.is_active ? 'badge-emerald' : 'badge-slate'}">
-                          ${u.is_active ? 'Активен' : 'Заблокирован'}
-                        </span>
-                      </td>
-                      <td class="mono" style="font-size:11px; color:var(--text-dim);">${dateStr(u.created_at)}</td>
-                      <td style="text-align:right;">
-                        <div style="display:flex; justify-content:flex-end; gap:6px;">
-                          <button class="btn btn-sm" title="Редактировать пользователя" onclick="openEditUserModal(${u.id})"><i data-lucide="edit-3" width="13"></i></button>
-                          ${u.id !== state.currentUser?.id ? `
-                            <button class="btn btn-sm" style="color:var(--red);" title="Удалить / Заблокировать" onclick="deleteUserUI(${u.id}, '${esc(u.username)}')"><i data-lucide="trash-2" width="13"></i></button>
-                          ` : ''}
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function openCreateUserModal() {
-      const locations = state.data?.locations || [];
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(500px, 95vw);">
-            <div class="modal-head">
-              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
-                <i data-lucide="user-plus" width="18" style="color:var(--primary)"></i>
-                <span>Создание пользователя</span>
-              </div>
-              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
-            </div>
-            <form onsubmit="handleCreateUserSubmit(event)">
-              <div class="modal-body" style="display:grid; gap:14px;">
-                <div class="field">
-                  <label>Логин / Имя пользователя *</label>
-                  <input type="text" id="new-user-username" class="input" placeholder="например, storekeeper2" required>
-                </div>
-                <div class="field">
-                  <label>Пароль (минимум 5 символов) *</label>
-                  <input type="password" id="new-user-password" class="input" placeholder="••••••••" required minlength="5">
-                </div>
-                <div class="field">
-                  <label>ФИО сотрудника *</label>
-                  <input type="text" id="new-user-fullname" class="input" placeholder="например, Сино Рахимов" required>
-                </div>
-                <div class="field">
-                  <label>Роль в системе (RBAC) *</label>
-                  <select id="new-user-role" class="select" required>
-                    <option value="worker">Мастер цеха (только просмотр/сканирование этапов)</option>
-                    <option value="storekeeper">Завскладом (приемка на склад, перемещения)</option>
-                    <option value="qc">Инспектор ОТК (изменение статусов качества)</option>
-                    <option value="manager">Менеджер (создание номенклатуры, отгрузки)</option>
-                    <option value="admin">Администратор (полный доступ, WORM-аудит)</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Закрепленный цех / Склад</label>
-                  <select id="new-user-workshop" class="select">
-                    <option value="">— Не закреплен (доступ ко всем) —</option>
-                    ${locations.map(l => `<option value="${l.id}">${esc(l.name)} (${esc(l.city)})</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn" onclick="closeModal()">Отмена</button>
-                <button type="submit" class="btn btn-primary">Создать пользователя</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
-
-    async function handleCreateUserSubmit(e) {
-      e.preventDefault();
-      const payload = {
-        username: document.getElementById('new-user-username').value.trim(),
-        password: document.getElementById('new-user-password').value,
-        full_name: document.getElementById('new-user-fullname').value.trim(),
-        role: document.getElementById('new-user-role').value,
-        workshop_id: document.getElementById('new-user-workshop').value ? parseInt(document.getElementById('new-user-workshop').value) : null,
-        is_active: true
-      };
-      try {
-        await api('/users', { method: 'POST', body: JSON.stringify(payload) });
-        toast(`Пользователь «${payload.username}» успешно создан!`, 'success');
-        closeModal();
-        await switchView('users');
-      } catch (err) {
-        toast(err.message, 'error');
-      }
-    }
-
-    async function openEditUserModal(userId) {
-      const users = await api('/users');
-      const u = users.find(item => item.id === userId);
-      if (!u) return;
-      const locations = state.data?.locations || [];
-
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(500px, 95vw);">
-            <div class="modal-head">
-              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
-                <i data-lucide="user-cog" width="18" style="color:var(--primary)"></i>
-                <span>Редактирование: @${esc(u.username)}</span>
-              </div>
-              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
-            </div>
-            <form onsubmit="handleEditUserSubmit(event, ${u.id})">
-              <div class="modal-body" style="display:grid; gap:14px;">
-                <div class="field">
-                  <label>ФИО сотрудника *</label>
-                  <input type="text" id="edit-user-fullname" class="input" value="${esc(u.full_name)}" required>
-                </div>
-                <div class="field">
-                  <label>Роль в системе (RBAC) *</label>
-                  <select id="edit-user-role" class="select" required>
-                    <option value="worker" ${u.role==='worker'?'selected':''}>Мастер цеха</option>
-                    <option value="storekeeper" ${u.role==='storekeeper'?'selected':''}>Завскладом</option>
-                    <option value="qc" ${u.role==='qc'?'selected':''}>Инспектор ОТК</option>
-                    <option value="manager" ${u.role==='manager'?'selected':''}>Менеджер</option>
-                    <option value="admin" ${u.role==='admin'?'selected':''}>Администратор</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Закрепленный цех / Склад</label>
-                  <select id="edit-user-workshop" class="select">
-                    <option value="">— Не закреплен (доступ ко всем) —</option>
-                    ${locations.map(l => `<option value="${l.id}" ${u.workshop_id===l.id?'selected':''}>${esc(l.name)} (${esc(l.city)})</option>`).join('')}
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Новый пароль (оставьте пустым, если не нужно менять)</label>
-                  <input type="password" id="edit-user-password" class="input" placeholder="••••••••">
-                </div>
-                <div class="field">
-                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                    <input type="checkbox" id="edit-user-active" ${u.is_active?'checked':''}>
-                    <span>Учетная запись активна</span>
-                  </label>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn" onclick="closeModal()">Отмена</button>
-                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
-
-    async function handleEditUserSubmit(e, userId) {
-      e.preventDefault();
-      const payload = {
-        full_name: document.getElementById('edit-user-fullname').value.trim(),
-        role: document.getElementById('edit-user-role').value,
-        workshop_id: document.getElementById('edit-user-workshop').value ? parseInt(document.getElementById('edit-user-workshop').value) : null,
-        is_active: document.getElementById('edit-user-active').checked
-      };
-      const pwd = document.getElementById('edit-user-password').value;
-      if (pwd && pwd.trim()) payload.password = pwd.trim();
-
-      try {
-        await api(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(payload) });
-        toast('Данные пользователя обновлены!', 'success');
-        closeModal();
-        await switchView('users');
-      } catch (err) {
-        toast(err.message, 'error');
-      }
-    }
-
-    async function deleteUserUI(userId, username) {
-      if (!confirm(`Вы действительно хотите удалить учетную запись пользователя «${username}»?`)) return;
-      try {
-        await api(`/users/${userId}`, { method: 'DELETE' });
-        toast(`Пользователь «${username}» удален!`, 'info');
-        await switchView('users');
-      } catch (err) {
-        toast(err.message, 'error');
-      }
-    }
-
-    // --- Audit Trail & SHA-256 Ledger View ---
-    async function renderAuditLogs() {
-      let logs = [];
-      try {
-        logs = await api('/audit-logs');
-      } catch (err) {
-        return `<div class="card" style="padding:40px; text-align:center; color:var(--red);">${esc(err.message)}</div>`;
-      }
-
-      return `
-        <div style="display:grid; gap:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div>
-              <h1 class="page-title" style="margin:0 0 4px 0;">Неизменяемый реестр аудита (WORM & SHA-256 Ledger)</h1>
-              <div style="color:var(--text-muted); font-size:12px;">
-                Криптографическая цепочка целостности операций (каждая запись связана SHA-256 хешем с предыдущей)
-              </div>
-            </div>
-            <button class="btn btn-primary" onclick="verifyAuditChainUI()" id="btn-verify-audit" style="background:#059669; border-color:#059669;">
-              <i data-lucide="shield-check" width="14"></i>
-              <span>⚡ Проверить цепочку SHA-256</span>
-            </button>
-          </div>
-
-          <div class="card" id="audit-verify-card" style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(6,95,70,0.05)); border:1px solid rgba(16,185,129,0.25);">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:38px; height:38px; border-radius:10px; background:rgba(16,185,129,0.2); display:grid; place-items:center; color:#34d399;">
-                <i data-lucide="shield-check" width="22"></i>
-              </div>
-              <div>
-                <div style="font-weight:700; font-size:14px; color:#fff;" id="audit-status-title">Статус WORM-реестра: Активен</div>
-                <div style="font-size:12px; color:var(--text-muted);" id="audit-status-desc">
-                  Всего зафиксировано ${logs.length} неизменяемых блоков. Модификация и удаление заблокированы на уровне СУБД.
-                </div>
-              </div>
-            </div>
-            <div class="mono" style="font-size:11px; color:var(--text-dim);" id="audit-head-hash">
-              Вершина цепочки: ${logs.length ? esc(logs[0].current_hash.substring(0, 16)) + '...' : 'GENESIS'}
-            </div>
-          </div>
-
-          <div class="card" style="padding:0; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse;">
-              <thead>
-                <tr>
-                  <th style="width:60px;">Блок</th>
-                  <th>Время (UTC)</th>
-                  <th>Пользователь</th>
-                  <th>Операция</th>
-                  <th>Сущность</th>
-                  <th>SHA-256 Хеш блока</th>
-                  <th style="text-align:right;">Payload</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${logs.map(l => {
-                  return `
-                    <tr>
-                      <td class="mono" style="font-weight:700; color:#38bdf8;">#${l.id}</td>
-                      <td class="mono" style="font-size:11px; color:var(--text-dim);">${dateStr(l.created_at)}</td>
-                      <td>
-                        <span class="mono" style="font-weight:600; color:#fff;">@${esc(l.username || 'system')}</span>
-                        ${l.user_role ? `<span class="badge ${ROLE_LABELS[l.user_role]?.color || 'badge-slate'}" style="font-size:9px; margin-left:4px;">${l.user_role}</span>` : ''}
-                      </td>
-                      <td><span class="badge badge-indigo" style="font-size:11px;">${esc(l.action_type)}</span></td>
-                      <td class="mono" style="font-size:11px; color:var(--text-dim);">${esc(l.target_entity)}</td>
-                      <td>
-                        <span class="mono" style="font-size:10px; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid var(--border);" title="Prev: ${esc(l.prev_hash)}">
-                          ${esc(l.current_hash.substring(0, 18))}...
-                        </span>
-                      </td>
-                      <td style="text-align:right;">
-                        <button class="btn btn-sm" onclick="openAuditPayloadModal(${l.id})" title="Просмотр JSON">
-                          <i data-lucide="code" width="12"></i> JSON
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    async function verifyAuditChainUI() {
-      const btn = document.getElementById('btn-verify-audit');
-      if (btn) btn.disabled = true;
-      try {
-        const res = await api('/audit-logs/verify');
-        if (res.verified) {
-          toast(res.message || 'Криптографическая цепочка SHA-256 целостна!', 'success');
-          const titleEl = document.getElementById('audit-status-title');
-          const descEl = document.getElementById('audit-status-desc');
-          const headEl = document.getElementById('audit-head-hash');
-          if (titleEl) titleEl.textContent = '✅ Цепочка аудита SHA-256 проверена и подтверждена!';
-          if (descEl) descEl.textContent = `Успешно верифицировано ${res.total_records} криптографических блоков без разрывов.`;
-          if (headEl) headEl.textContent = `Head SHA-256: ${res.head_hash}`;
-        } else {
-          toast(`ВНИМАНИЕ: Нарушение целостности в блоке #${res.compromised_id}!`, 'error');
-        }
-      } catch (err) {
-        toast(err.message, 'error');
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function openAuditPayloadModal(logId) {
-      const logs = await api('/audit-logs');
-      const l = logs.find(item => item.id === logId);
-      if (!l) return;
-
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(640px, 95vw);">
-            <div class="modal-head">
-              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
-                <i data-lucide="shield" width="18" style="color:var(--primary)"></i>
-                <span>Криптографический блок аудита #${l.id}</span>
-              </div>
-              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
-            </div>
-            <div class="modal-body" style="display:grid; gap:12px;">
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
-                  <div style="font-size:10px; color:var(--text-dim);">Операция</div>
-                  <div style="font-weight:600; font-size:12px; color:#fff;">${esc(l.action_type)}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
-                  <div style="font-size:10px; color:var(--text-dim);">Пользователь</div>
-                  <div style="font-weight:600; font-size:12px; color:#fff;">@${esc(l.username || 'system')} (${l.user_role || '—'})</div>
-                </div>
-              </div>
-
-              <div>
-                <div style="font-size:10px; color:var(--text-dim); margin-bottom:4px;">Предыдущий хеш (Prev Hash):</div>
-                <div class="mono" style="font-size:10px; word-break:break-all; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; border:1px solid var(--border);">${esc(l.prev_hash)}</div>
-              </div>
-              <div>
-                <div style="font-size:10px; color:var(--text-dim); margin-bottom:4px;">Хеш текущего блока (Current Hash SHA-256):</div>
-                <div class="mono" style="font-size:10px; word-break:break-all; background:rgba(16,185,129,0.08); color:#34d399; padding:6px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.3);">${esc(l.current_hash)}</div>
-              </div>
-
-              <div>
-                <div style="font-size:11px; font-weight:600; color:#fff; margin-bottom:6px;">Полезная нагрузка (Payload):</div>
-                <pre class="mono" style="font-size:11px; background:#0b0f17; color:#38bdf8; padding:12px; border-radius:8px; border:1px solid var(--border); max-height:220px; overflow:auto;">${esc(JSON.stringify(l.payload, null, 2))}</pre>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button class="btn btn-sm" onclick="closeModal()">Закрыть</button>
-            </div>
-          </div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
-    
-  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1813,6 +1090,7 @@
   <script>
     // --- Application State ---
     const state = {
+      currentUser: JSON.parse(localStorage.getItem('promtrek_user') || 'null'),
       data: null,
       currentView: 'dashboard',
       selectedBarcode: '',
@@ -5146,6 +4424,750 @@
         toast(err.message, 'error');
       }
     }
+
+
+    // === Security & RBAC Module (Moved to main script) ===
+    // =========================================================================
+    // --- Enterprise Security, AuthN, RBAC & WORM Audit Trail Module ---
+    // =========================================================================
+
+    const ROLE_LABELS = {
+      admin: { label: 'Администратор', color: 'badge-role-admin' },
+      manager: { label: 'Менеджер', color: 'badge-role-manager' },
+      storekeeper: { label: 'Завскладом', color: 'badge-role-storekeeper' },
+      qc: { label: 'Инспектор ОТК', color: 'badge-role-qc' },
+      worker: { label: 'Мастер цеха', color: 'badge-role-worker' },
+    };
+
+    async function initAuth() {
+      let token = localStorage.getItem('promtrek_token');
+      if (!token) {
+        // Автоматический вход по умолчанию как Администратор для мгновенной загрузки
+        try {
+          const res = await fetch('/api/auth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'admin', password: 'admin123' })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('promtrek_token', data.access_token);
+            localStorage.setItem('promtrek_user', JSON.stringify(data.user));
+            state.currentUser = data.user;
+            updateTopbarUser();
+            applyRolePermissions();
+            return true;
+          }
+        } catch (e) {
+          console.warn('Auto-login fallback:', e);
+        }
+        openLoginModal();
+        return false;
+      }
+      try {
+        const user = await api('/auth/me');
+        state.currentUser = user;
+        updateTopbarUser();
+        applyRolePermissions();
+        return true;
+      } catch (err) {
+        localStorage.removeItem('promtrek_token');
+        localStorage.removeItem('promtrek_user');
+        state.currentUser = null;
+        openLoginModal();
+        return false;
+      }
+    }
+
+    function updateTopbarUser() {
+      const u = state.currentUser;
+      if (!u) return;
+
+      const avatarEl = document.getElementById('topbar-avatar');
+      const nameEl = document.getElementById('topbar-fullname');
+      const roleEl = document.getElementById('topbar-role-badge');
+      const wsEl = document.getElementById('topbar-workshop');
+
+      if (avatarEl) {
+        const parts = (u.full_name || u.username).trim().split(' ');
+        const initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (u.username.substring(0, 2)).toUpperCase();
+        avatarEl.textContent = initials;
+      }
+      if (nameEl) nameEl.textContent = u.full_name || u.username;
+      if (roleEl) {
+        const meta = ROLE_LABELS[u.role] || { label: u.role, color: 'badge-slate' };
+        roleEl.className = `badge ${meta.color}`;
+        roleEl.textContent = meta.label;
+      }
+      if (wsEl) {
+        wsEl.textContent = u.workshop_name ? `${u.workshop_name} · ${u.workshop_city || 'Таджикистан'}` : 'Центральный офис';
+      }
+    }
+
+    function applyRolePermissions() {
+      const u = state.currentUser;
+      if (!u) return;
+      const role = u.role;
+
+      // Кнопка создания товара (admin, manager)
+      const btnCreate = document.getElementById('btn-open-create-product');
+      if (btnCreate) btnCreate.style.display = ['admin', 'manager'].includes(role) ? 'flex' : 'none';
+
+      // Кнопка перемещения (admin, manager, storekeeper)
+      const btnMove = document.getElementById('btn-open-move-modal');
+      if (btnMove) btnMove.style.display = ['admin', 'manager', 'storekeeper'].includes(role) ? 'flex' : 'none';
+
+      // Кнопка сброса системы (admin)
+      const btnReset = document.getElementById('btn-system-reset');
+      if (btnReset) btnReset.style.display = role === 'admin' ? 'flex' : 'none';
+
+      // Меню безопасности
+      const navSecGroup = document.getElementById('nav-group-security');
+      const navUsers = document.getElementById('nav-item-users');
+      const navAudit = document.getElementById('nav-item-audit');
+
+      if (navSecGroup) navSecGroup.style.display = ['admin', 'manager'].includes(role) ? 'block' : 'none';
+      if (navUsers) navUsers.style.display = role === 'admin' ? 'flex' : 'none';
+      if (navAudit) navAudit.style.display = ['admin', 'manager'].includes(role) ? 'flex' : 'none';
+    }
+
+    function openLoginModal() {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" style="backdrop-filter:blur(8px); background:rgba(3,7,18,0.85);">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(460px, 95vw); border:1px solid rgba(56,189,248,0.25); box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);">
+            <div class="modal-head" style="border-bottom:1px solid var(--border); padding-bottom:16px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#38bdf8,#6366f1); display:grid; place-items:center; color:#fff; font-weight:800; font-size:16px;">
+                  ПТ
+                </div>
+                <div>
+                  <div style="font-weight:700; font-size:16px; color:#fff;">Вход в Treking-V2</div>
+                  <div style="font-size:11px; color:var(--text-dim);">Корпоративная безопасность и ролевой учет (RBAC)</div>
+                </div>
+              </div>
+            </div>
+            <form onsubmit="handleLoginSubmit(event)">
+              <div class="modal-body" style="display:grid; gap:14px; padding:20px 0;">
+                <div class="field">
+                  <label>Логин / Имя пользователя *</label>
+                  <input type="text" id="login-username" class="input" placeholder="например, admin или manager" required autocomplete="username">
+                </div>
+                <div class="field">
+                  <label>Пароль *</label>
+                  <input type="password" id="login-password" class="input" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-login-submit" style="width:100%; justify-content:center; padding:10px; font-weight:600; margin-top:4px;">
+                  <i data-lucide="log-in" width="16"></i>
+                  <span>Войти в систему</span>
+                </button>
+
+                <div style="border-top:1px dashed var(--border); margin:10px 0 4px 0; padding-top:12px;">
+                  <div style="font-size:11px; font-weight:600; color:var(--text-dim); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                    Быстрый вход для проверки ролей:
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('admin', 'admin123')" style="justify-content:flex-start; font-size:11px;">
+                      👑 <b>Администратор</b>
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('manager', 'manager123')" style="justify-content:flex-start; font-size:11px;">
+                      📋 <b>Менеджер</b>
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('storekeeper', 'store123')" style="justify-content:flex-start; font-size:11px;">
+                      📦 <b>Завскладом</b>
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('qc', 'qc123')" style="justify-content:flex-start; font-size:11px;">
+                      🔍 <b>ОТК Контроль</b>
+                    </button>
+                  </div>
+                  <div style="margin-top:6px;">
+                    <button type="button" class="btn btn-sm" onclick="quickLoginAs('worker', 'worker123')" style="width:100%; justify-content:center; font-size:11px;">
+                      🛠️ <b>Мастер цеха (только просмотр/сканирование)</b>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function quickLoginAs(username, password) {
+      document.getElementById('login-username').value = username;
+      document.getElementById('login-password').value = password;
+      await performLogin(username, password);
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('login-username').value.trim();
+      const p = document.getElementById('login-password').value;
+      await performLogin(u, p);
+    }
+
+    async function performLogin(username, password) {
+      const btn = document.getElementById('btn-login-submit');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await api('/auth/token', {
+          method: 'POST',
+          body: JSON.stringify({ username, password })
+        });
+        localStorage.setItem('promtrek_token', res.access_token);
+        localStorage.setItem('promtrek_user', JSON.stringify(res.user));
+        state.currentUser = res.user;
+
+        closeModal();
+        toast(`Добро пожаловать, ${res.user.full_name || res.user.username}!`, 'success');
+
+        await loadData();
+        updateTopbarUser();
+        applyRolePermissions();
+        await switchView('dashboard');
+      } catch (err) {
+        toast(err.message || 'Ошибка входа в систему', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function logoutUser() {
+      localStorage.removeItem('promtrek_token');
+      localStorage.removeItem('promtrek_user');
+      state.currentUser = null;
+      closeModal();
+      toast('Вы вышли из системы', 'info');
+      openLoginModal();
+    }
+
+    function openUserSessionMenu() {
+      const u = state.currentUser;
+      if (!u) {
+        openLoginModal();
+        return;
+      }
+      const roleMeta = ROLE_LABELS[u.role] || { label: u.role, color: 'badge-slate' };
+
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(440px, 95vw);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="user-check" width="18" style="color:var(--primary)"></i>
+                <span>Текущая учетная запись</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <div class="modal-body" style="display:grid; gap:16px;">
+              <div style="display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px;">
+                <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#6366f1); display:grid; place-items:center; font-weight:800; font-size:14px; color:#fff;">
+                  ${((u.full_name || u.username)[0]).toUpperCase()}
+                </div>
+                <div>
+                  <div style="font-weight:700; font-size:14px; color:#fff;">${esc(u.full_name || u.username)}</div>
+                  <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+                    <span class="badge ${roleMeta.color}" style="font-size:10px;">${roleMeta.label}</span>
+                    <span class="mono" style="font-size:11px; color:var(--text-dim);">@${esc(u.username)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; font-weight:600; margin-bottom:6px;">Быстрое переключение учетной записи:</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                  <button class="btn btn-sm" onclick="quickLoginAs('admin','admin123')">👑 Администратор</button>
+                  <button class="btn btn-sm" onclick="quickLoginAs('manager','manager123')">📋 Менеджер</button>
+                  <button class="btn btn-sm" onclick="quickLoginAs('storekeeper','store123')">📦 Завскладом</button>
+                  <button class="btn btn-sm" onclick="quickLoginAs('qc','qc123')">🔍 Инспектор ОТК</button>
+                </div>
+                <div style="margin-top:6px;">
+                  <button class="btn btn-sm" onclick="quickLoginAs('worker','worker123')" style="width:100%; justify-content:center;">🛠️ Мастер цеха</button>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer" style="display:flex; justify-content:space-between;">
+              <button class="btn btn-sm" onclick="closeModal()">Закрыть</button>
+              <button class="btn btn-sm btn-accent" style="color:var(--red);" onclick="logoutUser()">
+                <i data-lucide="log-out" width="14"></i>
+                <span>Выйти из аккаунта</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // --- QC Inspection Modal ---
+    function openQCModal(productId) {
+      const p = state.data.products.find(item => item.id === productId);
+      if (!p) return;
+
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(480px, 95vw);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="clipboard-check" width="18" style="color:var(--purple)"></i>
+                <span>Инспекция ОТК · Контроль качества</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <form onsubmit="handleQCSave(event, ${p.id})">
+              <div class="modal-body" style="display:grid; gap:14px;">
+                <div style="padding:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px;">
+                  <div style="font-weight:600; color:#fff;">${esc(p.name)}</div>
+                  <div class="mono" style="font-size:11px; color:var(--text-dim); margin-top:2px;">Артикул: ${p.sku} | Партия: ${p.batch_id || '—'}</div>
+                </div>
+                <div class="field">
+                  <label>Решение инспектора качества (ОТК) *</label>
+                  <select id="qc-new-status" class="select" required>
+                    <option value="Пройден" ${p.qc_status==='Пройден'?'selected':''}>✅ Пройден (Соответствует ГОСТ/ТУ)</option>
+                    <option value="Брак (на доработку)" ${p.qc_status==='Брак (на доработку)'?'selected':''}>⚠️ Брак (направить на доработку)</option>
+                    <option value="Отклонен" ${p.qc_status==='Отклонен'?'selected':''}>❌ Отклонен (брак без возможности исправления)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Заключение / Замечания инспектора</label>
+                  <textarea id="qc-note" class="textarea" rows="3" placeholder="Укажите результаты визуального контроля, плотности ткани или замеров..."></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn" onclick="closeModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary" style="background:#8b5cf6; border-color:#8b5cf6;">Сохранить заключение ОТК</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function handleQCSave(e, productId) {
+      e.preventDefault();
+      const status = document.getElementById('qc-new-status').value;
+      const note = document.getElementById('qc-note').value.trim();
+      try {
+        await api(`/products/${productId}/qc`, {
+          method: 'PUT',
+          body: JSON.stringify({ qc_status: status, note })
+        });
+        toast(`Статус качества обновлен: «${status}»`, 'success');
+        closeModal();
+        await loadData();
+        await switchView(state.currentView);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    // --- Users Management View (Admin Only) ---
+    async function renderUsers() {
+      let users = [];
+      try {
+        users = await api('/users');
+      } catch (err) {
+        return `<div class="card" style="padding:40px; text-align:center; color:var(--red);">${esc(err.message)}</div>`;
+      }
+
+      return `
+        <div style="display:grid; gap:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <h1 class="page-title" style="margin:0 0 4px 0;">Управление пользователями и правами (RBAC)</h1>
+              <div style="color:var(--text-muted); font-size:12px;">
+                Централизованный контроль доступа, учетные записи цехов и закрепление складов
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateUserModal()">
+              <i data-lucide="user-plus" width="14"></i>
+              <span>Новый пользователь</span>
+            </button>
+          </div>
+
+          <div class="card" style="padding:0; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="width:50px;">ID</th>
+                  <th>Пользователь</th>
+                  <th>ФИО сотрудника</th>
+                  <th>Роль (RBAC)</th>
+                  <th>Цех / Склад</th>
+                  <th>Статус</th>
+                  <th>Создан</th>
+                  <th style="text-align:right;">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${users.map(u => {
+                  const roleMeta = ROLE_LABELS[u.role] || { label: u.role, color: 'badge-slate' };
+                  return `
+                    <tr>
+                      <td class="mono" style="color:var(--text-dim);">${u.id}</td>
+                      <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#6366f1); display:grid; place-items:center; font-weight:700; font-size:11px; color:#fff;">
+                            ${((u.full_name || u.username)[0]).toUpperCase()}
+                          </div>
+                          <span class="mono" style="font-weight:600; color:#fff;">${esc(u.username)}</span>
+                        </div>
+                      </td>
+                      <td style="font-weight:500;">${esc(u.full_name)}</td>
+                      <td><span class="badge ${roleMeta.color}">${roleMeta.label}</span></td>
+                      <td>${u.workshop_name ? `<span class="workshop-pill">${esc(u.workshop_name)}</span>` : '<span style="color:var(--text-dim)">— Все цеха —</span>'}</td>
+                      <td>
+                        <span class="badge ${u.is_active ? 'badge-emerald' : 'badge-slate'}">
+                          ${u.is_active ? 'Активен' : 'Заблокирован'}
+                        </span>
+                      </td>
+                      <td class="mono" style="font-size:11px; color:var(--text-dim);">${dateStr(u.created_at)}</td>
+                      <td style="text-align:right;">
+                        <div style="display:flex; justify-content:flex-end; gap:6px;">
+                          <button class="btn btn-sm" title="Редактировать пользователя" onclick="openEditUserModal(${u.id})"><i data-lucide="edit-3" width="13"></i></button>
+                          ${u.id !== state.currentUser?.id ? `
+                            <button class="btn btn-sm" style="color:var(--red);" title="Удалить / Заблокировать" onclick="deleteUserUI(${u.id}, '${esc(u.username)}')"><i data-lucide="trash-2" width="13"></i></button>
+                          ` : ''}
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openCreateUserModal() {
+      const locations = state.data?.locations || [];
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(500px, 95vw);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="user-plus" width="18" style="color:var(--primary)"></i>
+                <span>Создание пользователя</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <form onsubmit="handleCreateUserSubmit(event)">
+              <div class="modal-body" style="display:grid; gap:14px;">
+                <div class="field">
+                  <label>Логин / Имя пользователя *</label>
+                  <input type="text" id="new-user-username" class="input" placeholder="например, storekeeper2" required>
+                </div>
+                <div class="field">
+                  <label>Пароль (минимум 5 символов) *</label>
+                  <input type="password" id="new-user-password" class="input" placeholder="••••••••" required minlength="5">
+                </div>
+                <div class="field">
+                  <label>ФИО сотрудника *</label>
+                  <input type="text" id="new-user-fullname" class="input" placeholder="например, Сино Рахимов" required>
+                </div>
+                <div class="field">
+                  <label>Роль в системе (RBAC) *</label>
+                  <select id="new-user-role" class="select" required>
+                    <option value="worker">Мастер цеха (только просмотр/сканирование этапов)</option>
+                    <option value="storekeeper">Завскладом (приемка на склад, перемещения)</option>
+                    <option value="qc">Инспектор ОТК (изменение статусов качества)</option>
+                    <option value="manager">Менеджер (создание номенклатуры, отгрузки)</option>
+                    <option value="admin">Администратор (полный доступ, WORM-аудит)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Закрепленный цех / Склад</label>
+                  <select id="new-user-workshop" class="select">
+                    <option value="">— Не закреплен (доступ ко всем) —</option>
+                    ${locations.map(l => `<option value="${l.id}">${esc(l.name)} (${esc(l.city)})</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn" onclick="closeModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Создать пользователя</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function handleCreateUserSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        username: document.getElementById('new-user-username').value.trim(),
+        password: document.getElementById('new-user-password').value,
+        full_name: document.getElementById('new-user-fullname').value.trim(),
+        role: document.getElementById('new-user-role').value,
+        workshop_id: document.getElementById('new-user-workshop').value ? parseInt(document.getElementById('new-user-workshop').value) : null,
+        is_active: true
+      };
+      try {
+        await api('/users', { method: 'POST', body: JSON.stringify(payload) });
+        toast(`Пользователь «${payload.username}» успешно создан!`, 'success');
+        closeModal();
+        await switchView('users');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function openEditUserModal(userId) {
+      const users = await api('/users');
+      const u = users.find(item => item.id === userId);
+      if (!u) return;
+      const locations = state.data?.locations || [];
+
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(500px, 95vw);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="user-cog" width="18" style="color:var(--primary)"></i>
+                <span>Редактирование: @${esc(u.username)}</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <form onsubmit="handleEditUserSubmit(event, ${u.id})">
+              <div class="modal-body" style="display:grid; gap:14px;">
+                <div class="field">
+                  <label>ФИО сотрудника *</label>
+                  <input type="text" id="edit-user-fullname" class="input" value="${esc(u.full_name)}" required>
+                </div>
+                <div class="field">
+                  <label>Роль в системе (RBAC) *</label>
+                  <select id="edit-user-role" class="select" required>
+                    <option value="worker" ${u.role==='worker'?'selected':''}>Мастер цеха</option>
+                    <option value="storekeeper" ${u.role==='storekeeper'?'selected':''}>Завскладом</option>
+                    <option value="qc" ${u.role==='qc'?'selected':''}>Инспектор ОТК</option>
+                    <option value="manager" ${u.role==='manager'?'selected':''}>Менеджер</option>
+                    <option value="admin" ${u.role==='admin'?'selected':''}>Администратор</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Закрепленный цех / Склад</label>
+                  <select id="edit-user-workshop" class="select">
+                    <option value="">— Не закреплен (доступ ко всем) —</option>
+                    ${locations.map(l => `<option value="${l.id}" ${u.workshop_id===l.id?'selected':''}>${esc(l.name)} (${esc(l.city)})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Новый пароль (оставьте пустым, если не нужно менять)</label>
+                  <input type="password" id="edit-user-password" class="input" placeholder="••••••••">
+                </div>
+                <div class="field">
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="edit-user-active" ${u.is_active?'checked':''}>
+                    <span>Учетная запись активна</span>
+                  </label>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn" onclick="closeModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function handleEditUserSubmit(e, userId) {
+      e.preventDefault();
+      const payload = {
+        full_name: document.getElementById('edit-user-fullname').value.trim(),
+        role: document.getElementById('edit-user-role').value,
+        workshop_id: document.getElementById('edit-user-workshop').value ? parseInt(document.getElementById('edit-user-workshop').value) : null,
+        is_active: document.getElementById('edit-user-active').checked
+      };
+      const pwd = document.getElementById('edit-user-password').value;
+      if (pwd && pwd.trim()) payload.password = pwd.trim();
+
+      try {
+        await api(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Данные пользователя обновлены!', 'success');
+        closeModal();
+        await switchView('users');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function deleteUserUI(userId, username) {
+      if (!confirm(`Вы действительно хотите удалить учетную запись пользователя «${username}»?`)) return;
+      try {
+        await api(`/users/${userId}`, { method: 'DELETE' });
+        toast(`Пользователь «${username}» удален!`, 'info');
+        await switchView('users');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    // --- Audit Trail & SHA-256 Ledger View ---
+    async function renderAuditLogs() {
+      let logs = [];
+      try {
+        logs = await api('/audit-logs');
+      } catch (err) {
+        return `<div class="card" style="padding:40px; text-align:center; color:var(--red);">${esc(err.message)}</div>`;
+      }
+
+      return `
+        <div style="display:grid; gap:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <h1 class="page-title" style="margin:0 0 4px 0;">Неизменяемый реестр аудита (WORM & SHA-256 Ledger)</h1>
+              <div style="color:var(--text-muted); font-size:12px;">
+                Криптографическая цепочка целостности операций (каждая запись связана SHA-256 хешем с предыдущей)
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="verifyAuditChainUI()" id="btn-verify-audit" style="background:#059669; border-color:#059669;">
+              <i data-lucide="shield-check" width="14"></i>
+              <span>⚡ Проверить цепочку SHA-256</span>
+            </button>
+          </div>
+
+          <div class="card" id="audit-verify-card" style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(6,95,70,0.05)); border:1px solid rgba(16,185,129,0.25);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:38px; height:38px; border-radius:10px; background:rgba(16,185,129,0.2); display:grid; place-items:center; color:#34d399;">
+                <i data-lucide="shield-check" width="22"></i>
+              </div>
+              <div>
+                <div style="font-weight:700; font-size:14px; color:#fff;" id="audit-status-title">Статус WORM-реестра: Активен</div>
+                <div style="font-size:12px; color:var(--text-muted);" id="audit-status-desc">
+                  Всего зафиксировано ${logs.length} неизменяемых блоков. Модификация и удаление заблокированы на уровне СУБД.
+                </div>
+              </div>
+            </div>
+            <div class="mono" style="font-size:11px; color:var(--text-dim);" id="audit-head-hash">
+              Вершина цепочки: ${logs.length ? esc(logs[0].current_hash.substring(0, 16)) + '...' : 'GENESIS'}
+            </div>
+          </div>
+
+          <div class="card" style="padding:0; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="width:60px;">Блок</th>
+                  <th>Время (UTC)</th>
+                  <th>Пользователь</th>
+                  <th>Операция</th>
+                  <th>Сущность</th>
+                  <th>SHA-256 Хеш блока</th>
+                  <th style="text-align:right;">Payload</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${logs.map(l => {
+                  return `
+                    <tr>
+                      <td class="mono" style="font-weight:700; color:#38bdf8;">#${l.id}</td>
+                      <td class="mono" style="font-size:11px; color:var(--text-dim);">${dateStr(l.created_at)}</td>
+                      <td>
+                        <span class="mono" style="font-weight:600; color:#fff;">@${esc(l.username || 'system')}</span>
+                        ${l.user_role ? `<span class="badge ${ROLE_LABELS[l.user_role]?.color || 'badge-slate'}" style="font-size:9px; margin-left:4px;">${l.user_role}</span>` : ''}
+                      </td>
+                      <td><span class="badge badge-indigo" style="font-size:11px;">${esc(l.action_type)}</span></td>
+                      <td class="mono" style="font-size:11px; color:var(--text-dim);">${esc(l.target_entity)}</td>
+                      <td>
+                        <span class="mono" style="font-size:10px; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid var(--border);" title="Prev: ${esc(l.prev_hash)}">
+                          ${esc(l.current_hash.substring(0, 18))}...
+                        </span>
+                      </td>
+                      <td style="text-align:right;">
+                        <button class="btn btn-sm" onclick="openAuditPayloadModal(${l.id})" title="Просмотр JSON">
+                          <i data-lucide="code" width="12"></i> JSON
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function verifyAuditChainUI() {
+      const btn = document.getElementById('btn-verify-audit');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await api('/audit-logs/verify');
+        if (res.verified) {
+          toast(res.message || 'Криптографическая цепочка SHA-256 целостна!', 'success');
+          const titleEl = document.getElementById('audit-status-title');
+          const descEl = document.getElementById('audit-status-desc');
+          const headEl = document.getElementById('audit-head-hash');
+          if (titleEl) titleEl.textContent = '✅ Цепочка аудита SHA-256 проверена и подтверждена!';
+          if (descEl) descEl.textContent = `Успешно верифицировано ${res.total_records} криптографических блоков без разрывов.`;
+          if (headEl) headEl.textContent = `Head SHA-256: ${res.head_hash}`;
+        } else {
+          toast(`ВНИМАНИЕ: Нарушение целостности в блоке #${res.compromised_id}!`, 'error');
+        }
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function openAuditPayloadModal(logId) {
+      const logs = await api('/audit-logs');
+      const l = logs.find(item => item.id === logId);
+      if (!l) return;
+
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box" role="dialog" aria-modal="true" style="width:min(640px, 95vw);">
+            <div class="modal-head">
+              <div style="font-weight:700; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="shield" width="18" style="color:var(--primary)"></i>
+                <span>Криптографический блок аудита #${l.id}</span>
+              </div>
+              <button class="btn btn-sm btn-icon" onclick="closeModal()"><i data-lucide="x" width="16"></i></button>
+            </div>
+            <div class="modal-body" style="display:grid; gap:12px;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
+                  <div style="font-size:10px; color:var(--text-dim);">Операция</div>
+                  <div style="font-weight:600; font-size:12px; color:#fff;">${esc(l.action_type)}</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
+                  <div style="font-size:10px; color:var(--text-dim);">Пользователь</div>
+                  <div style="font-weight:600; font-size:12px; color:#fff;">@${esc(l.username || 'system')} (${l.user_role || '—'})</div>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size:10px; color:var(--text-dim); margin-bottom:4px;">Предыдущий хеш (Prev Hash):</div>
+                <div class="mono" style="font-size:10px; word-break:break-all; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; border:1px solid var(--border);">${esc(l.prev_hash)}</div>
+              </div>
+              <div>
+                <div style="font-size:10px; color:var(--text-dim); margin-bottom:4px;">Хеш текущего блока (Current Hash SHA-256):</div>
+                <div class="mono" style="font-size:10px; word-break:break-all; background:rgba(16,185,129,0.08); color:#34d399; padding:6px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.3);">${esc(l.current_hash)}</div>
+              </div>
+
+              <div>
+                <div style="font-size:11px; font-weight:600; color:#fff; margin-bottom:6px;">Полезная нагрузка (Payload):</div>
+                <pre class="mono" style="font-size:11px; background:#0b0f17; color:#38bdf8; padding:12px; border-radius:8px; border:1px solid var(--border); max-height:220px; overflow:auto;">${esc(JSON.stringify(l.payload, null, 2))}</pre>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-sm" onclick="closeModal()">Закрыть</button>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+    
 
     // --- Init & Event Listeners ---
     document.querySelectorAll('.nav-item').forEach(button => {
